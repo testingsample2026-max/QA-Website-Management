@@ -1,0 +1,266 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net - Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- HELPER PRIMITIVES ---
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- ENTITY SCHEMA VALIDATION HELPERS ---
+
+    function isValidProject(data) {
+      return data.keys().hasAll(['id', 'name', 'description', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().size() == 6
+        && isValidId(data.id)
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 200
+        && data.description is string && data.description.size() <= 2000
+        && data.status is string && data.status.size() <= 50
+        && data.createdAt is string && data.createdAt.size() <= 50
+        && data.updatedAt is string && data.updatedAt.size() <= 50;
+    }
+
+    function isValidModule(data) {
+      return data.keys().hasAll(['id', 'projectId', 'name', 'description', 'status', 'createdAt'])
+        && data.keys().size() == 6
+        && isValidId(data.id)
+        && isValidId(data.projectId)
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 200
+        && data.description is string && data.description.size() <= 2000
+        && data.status is string && data.status.size() <= 50
+        && data.createdAt is string && data.createdAt.size() <= 50;
+    }
+
+    function isValidRequirement(data) {
+      return data.keys().hasAll(['id', 'projectId', 'moduleId', 'title', 'description', 'priority', 'status', 'createdAt'])
+        && data.keys().size() == 8
+        && isValidId(data.id)
+        && isValidId(data.projectId)
+        && isValidId(data.moduleId)
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 200
+        && data.description is string && data.description.size() <= 2000
+        && data.priority is string && data.priority.size() <= 50
+        && data.status is string && data.status.size() <= 50
+        && data.createdAt is string && data.createdAt.size() <= 50;
+    }
+
+    function isValidTestCase(data) {
+      return data.keys().hasAll(['id', 'projectId', 'moduleId', 'title', 'description', 'preconditions', 'steps', 'expectedResult', 'priority', 'type', 'status', 'lastExecutionStatus', 'createdAt'])
+        && (data.keys().size() == 13 || (data.keys().size() == 14 && data.keys().hasAny(['requirementId', 'assignedQaId'])) || (data.keys().size() == 15 && data.keys().hasAll(['requirementId', 'assignedQaId'])))
+        && isValidId(data.id)
+        && isValidId(data.projectId)
+        && isValidId(data.moduleId)
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 200
+        && data.description is string && data.description.size() <= 2000
+        && data.preconditions is string && data.preconditions.size() <= 2000
+        && data.steps is list && data.steps.size() <= 100
+        && data.expectedResult is string && data.expectedResult.size() <= 50000
+        && data.priority is string && data.priority.size() <= 50
+        && data.type is string && data.type.size() <= 50
+        && data.status is string && data.status.size() <= 50
+        && data.lastExecutionStatus is string && data.lastExecutionStatus.size() <= 50
+        && data.createdAt is string && data.createdAt.size() <= 50;
+    }
+
+    function isValidExecution(data) {
+      return data.keys().hasAll(['id', 'testCaseId', 'projectId', 'moduleId', 'status', 'executedById', 'executionDate', 'notes', 'actualResult'])
+        && isValidId(data.id)
+        && isValidId(data.testCaseId)
+        && isValidId(data.projectId)
+        && isValidId(data.moduleId)
+        && data.status is string && data.status.size() <= 50
+        && isValidId(data.executedById)
+        && data.executionDate is string && data.executionDate.size() <= 50
+        && data.notes is string && data.notes.size() <= 2000
+        && data.actualResult is string && data.actualResult.size() <= 2000;
+    }
+
+    function isValidBug(data) {
+      return data.keys().hasAll(['id', 'projectId', 'moduleId', 'title', 'description', 'severity', 'priority', 'status', 'createdAt', 'updatedAt'])
+        && (data.keys().size() == 10 
+            || (data.keys().size() == 11 && data.keys().hasAny(['testCaseId', 'executionId', 'assignedDevId', 'reporterQaId']))
+            || (data.keys().size() == 12 && data.keys().hasAny(['testCaseId', 'executionId', 'assignedDevId', 'reporterQaId']))
+            || (data.keys().size() == 13 && data.keys().hasAny(['testCaseId', 'executionId', 'assignedDevId', 'reporterQaId']))
+            || (data.keys().size() == 14 && data.keys().hasAll(['testCaseId', 'executionId', 'assignedDevId', 'reporterQaId'])))
+        && isValidId(data.id)
+        && isValidId(data.projectId)
+        && isValidId(data.moduleId)
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 200
+        && data.description is string && data.description.size() <= 2000
+        && data.severity is string && data.severity.size() <= 50
+        && data.priority is string && data.priority.size() <= 50
+        && data.status is string && data.status.size() <= 50
+        && data.createdAt is string && data.createdAt.size() <= 50
+        && data.updatedAt is string && data.updatedAt.size() <= 50;
+    }
+
+    // Email patterns are validated to match standard structural email formats
+    function isValidDeveloper(data) {
+      return data.keys().hasAll(['id', 'name', 'email', 'role', 'status'])
+        && data.keys().size() == 5
+        && isValidId(data.id)
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 200
+        && data.email is string && data.email.size() <= 200 && data.email.matches('^.+@.+\\..+$')
+        && data.role is string && data.role.size() <= 100
+        && data.status is string && data.status.size() <= 50;
+    }
+
+    function isValidQaEngineer(data) {
+      return data.keys().hasAll(['id', 'name', 'email', 'role', 'status'])
+        && data.keys().size() == 5
+        && isValidId(data.id)
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 200
+        && data.email is string && data.email.size() <= 200 && data.email.matches('^.+@.+\\..+$')
+        && data.role is string && data.role.size() <= 100
+        && data.status is string && data.status.size() <= 50;
+    }
+
+    function isValidRelease(data) {
+      return data.keys().hasAll(['id', 'projectId', 'version', 'releaseDate', 'status', 'notes', 'createdAt'])
+        && data.keys().size() == 7
+        && isValidId(data.id)
+        && isValidId(data.projectId)
+        && data.version is string && data.version.size() > 0 && data.version.size() <= 50
+        && data.releaseDate is string && data.releaseDate.size() <= 50
+        && data.status is string && data.status.size() <= 50
+        && data.notes is string && data.notes.size() <= 2000
+        && data.createdAt is string && data.createdAt.size() <= 50;
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['id', 'action', 'entityType', 'entityId', 'entityName', 'details', 'timestamp', 'user'])
+        && data.keys().size() == 8
+        && isValidId(data.id)
+        && data.action is string && data.action.size() <= 50
+        && data.entityType is string && data.entityType.size() <= 50
+        && isValidId(data.entityId)
+        && data.entityName is string && data.entityName.size() <= 200
+        && data.details is string && data.details.size() <= 2000
+        && data.timestamp is string && data.timestamp.size() <= 50
+        && data.user is string && data.user.size() <= 200;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['id', 'title', 'message', 'type', 'timestamp', 'read'])
+        && data.keys().size() == 6
+        && isValidId(data.id)
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 200
+        && data.message is string && data.message.size() <= 2000
+        && data.type is string && data.type.size() <= 50
+        && data.timestamp is string && data.timestamp.size() <= 50
+        && data.read is bool;
+    }
+
+    function isValidSettings(data) {
+      return data.keys().hasAll(['companyName', 'theme', 'language', 'timezone', 'emailNotifications', 'pushNotifications', 'userName', 'userEmail', 'fontFamily', 'primaryColor'])
+        && (data.keys().size() == 10 || (data.keys().size() == 11 && data.keys().hasAny(['borderStyle'])))
+        && data.companyName is string && data.companyName.size() <= 200
+        && data.theme is string && data.theme.size() <= 50
+        && data.language is string && data.language.size() <= 50
+        && data.timezone is string && data.timezone.size() <= 50
+        && data.emailNotifications is bool
+        && data.pushNotifications is bool
+        && data.userName is string && data.userName.size() <= 200
+        && data.userEmail is string && data.userEmail.size() <= 200 && data.userEmail.matches('^.+@.+\\..+$')
+        && data.fontFamily is string && data.fontFamily.size() <= 50
+        && data.primaryColor is string && data.primaryColor.size() <= 50;
+    }
+
+    // --- MATCH BLOCKS ---
+
+    match /projects/{projectId} {
+      allow read: if true;
+      allow create: if isValidId(projectId) && isValidProject(incoming()) && incoming().id == projectId;
+      allow update: if isValidProject(incoming()) && incoming().id == projectId && incoming().createdAt == existing().createdAt;
+      allow delete: if true;
+    }
+
+    match /modules/{moduleId} {
+      allow read: if true;
+      allow create: if isValidId(moduleId) && isValidModule(incoming()) && incoming().id == moduleId;
+      allow update: if isValidModule(incoming()) && incoming().id == moduleId && incoming().createdAt == existing().createdAt;
+      allow delete: if true;
+    }
+
+    match /requirements/{requirementId} {
+      allow read: if true;
+      allow create: if isValidId(requirementId) && isValidRequirement(incoming()) && incoming().id == requirementId;
+      allow update: if isValidRequirement(incoming()) && incoming().id == requirementId && incoming().createdAt == existing().createdAt;
+      allow delete: if true;
+    }
+
+    match /testCases/{testCaseId} {
+      allow read: if true;
+      allow create: if isValidId(testCaseId) && isValidTestCase(incoming()) && incoming().id == testCaseId;
+      allow update: if isValidTestCase(incoming()) && incoming().id == testCaseId && incoming().createdAt == existing().createdAt;
+      allow delete: if true;
+    }
+
+    match /executions/{executionId} {
+      allow read: if true;
+      allow create: if isValidId(executionId) && isValidExecution(incoming()) && incoming().id == executionId;
+      allow update: if isValidExecution(incoming()) && incoming().id == executionId;
+      allow delete: if true;
+    }
+
+    match /bugs/{bugId} {
+      allow read: if true;
+      allow create: if isValidId(bugId) && isValidBug(incoming()) && incoming().id == bugId;
+      allow update: if isValidBug(incoming()) && incoming().id == bugId && incoming().createdAt == existing().createdAt;
+      allow delete: if true;
+    }
+
+    match /developers/{developerId} {
+      allow read: if true;
+      allow create: if isValidId(developerId) && isValidDeveloper(incoming()) && incoming().id == developerId;
+      allow update: if isValidDeveloper(incoming()) && incoming().id == developerId;
+      allow delete: if true;
+    }
+
+    match /qaEngineers/{qaEngineerId} {
+      allow read: if true;
+      allow create: if isValidId(qaEngineerId) && isValidQaEngineer(incoming()) && incoming().id == qaEngineerId;
+      allow update: if isValidQaEngineer(incoming()) && incoming().id == qaEngineerId;
+      allow delete: if true;
+    }
+
+    match /releases/{releaseId} {
+      allow read: if true;
+      allow create: if isValidId(releaseId) && isValidRelease(incoming()) && incoming().id == releaseId;
+      allow update: if isValidRelease(incoming()) && incoming().id == releaseId && incoming().createdAt == existing().createdAt;
+      allow delete: if true;
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if true;
+      allow create: if isValidId(logId) && isValidAuditLog(incoming()) && incoming().id == logId;
+      allow update, delete: if false; // Audit logs are immutable
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if true;
+      allow create: if isValidId(notificationId) && isValidNotification(incoming()) && incoming().id == notificationId;
+      allow update: if isValidNotification(incoming()) && incoming().id == notificationId;
+      allow delete: if true;
+    }
+
+    match /settings/{settingsId} {
+      allow read: if true;
+      allow create, update: if isValidId(settingsId) && isValidSettings(incoming());
+      allow delete: if false;
+    }
+  }
+}

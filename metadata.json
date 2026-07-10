@@ -1,0 +1,6 @@
+{
+  "name": "Enterprise QA Test Management System",
+  "description": "A modern, enterprise-grade QA test case management, execution tracker, bug tracker, and reporting system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

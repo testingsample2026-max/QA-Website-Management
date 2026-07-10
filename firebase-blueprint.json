@@ -1,0 +1,251 @@
+{
+  "entities": {
+    "Project": {
+      "title": "Project",
+      "description": "Enterprise QA Project",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "description", "status", "createdAt", "updatedAt"]
+    },
+    "Module": {
+      "title": "Module",
+      "description": "Project Module",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "projectId", "name", "description", "status", "createdAt"]
+    },
+    "Requirement": {
+      "title": "Requirement",
+      "description": "Product/Feature Requirement",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "moduleId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "priority": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "projectId", "moduleId", "title", "description", "priority", "status", "createdAt"]
+    },
+    "TestCase": {
+      "title": "TestCase",
+      "description": "QA Test Case Definition",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "moduleId": { "type": "string" },
+        "requirementId": { "type": ["string", "null"] },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "preconditions": { "type": "string" },
+        "steps": { "type": "array" },
+        "expectedResult": { "type": "string" },
+        "priority": { "type": "string" },
+        "type": { "type": "string" },
+        "status": { "type": "string" },
+        "lastExecutionStatus": { "type": "string" },
+        "assignedQaId": { "type": ["string", "null"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "projectId", "moduleId", "title", "description", "preconditions", "steps", "expectedResult", "priority", "type", "status", "lastExecutionStatus", "createdAt"]
+    },
+    "TestExecution": {
+      "title": "TestExecution",
+      "description": "Logged Test Case Execution Record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "testCaseId": { "type": "string" },
+        "projectId": { "type": "string" },
+        "moduleId": { "type": "string" },
+        "status": { "type": "string" },
+        "executedById": { "type": "string" },
+        "executionDate": { "type": "string" },
+        "notes": { "type": "string" },
+        "actualResult": { "type": "string" },
+        "runTimeMs": { "type": ["number", "null"] }
+      },
+      "required": ["id", "testCaseId", "projectId", "moduleId", "status", "executedById", "executionDate", "notes", "actualResult"]
+    },
+    "Bug": {
+      "title": "Bug",
+      "description": "Tracked Defect/Bug",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "moduleId": { "type": "string" },
+        "testCaseId": { "type": ["string", "null"] },
+        "executionId": { "type": ["string", "null"] },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "severity": { "type": "string" },
+        "priority": { "type": "string" },
+        "status": { "type": "string" },
+        "assignedDevId": { "type": ["string", "null"] },
+        "reporterQaId": { "type": ["string", "null"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "projectId", "moduleId", "title", "description", "severity", "priority", "status", "createdAt", "updatedAt"]
+    },
+    "Developer": {
+      "title": "Developer",
+      "description": "Developer Team Member",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "name", "email", "role", "status"]
+    },
+    "QaEngineer": {
+      "title": "QaEngineer",
+      "description": "QA Team Member",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "name", "email", "role", "status"]
+    },
+    "Release": {
+      "title": "Release",
+      "description": "Release Milestones",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "version": { "type": "string" },
+        "releaseDate": { "type": "string" },
+        "status": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "projectId", "version", "releaseDate", "status", "notes", "createdAt"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Activity Audit Trail Log",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "action": { "type": "string" },
+        "entityType": { "type": "string" },
+        "entityId": { "type": "string" },
+        "entityName": { "type": "string" },
+        "details": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "user": { "type": "string" }
+      },
+      "required": ["id", "action", "entityType", "entityId", "entityName", "details", "timestamp", "user"]
+    },
+    "AppNotification": {
+      "title": "AppNotification",
+      "description": "In-app Alert Notification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["id", "title", "message", "type", "timestamp", "read"]
+    },
+    "SystemSettings": {
+      "title": "SystemSettings",
+      "description": "Enterprise App Customizations",
+      "type": "object",
+      "properties": {
+        "companyName": { "type": "string" },
+        "theme": { "type": "string" },
+        "language": { "type": "string" },
+        "timezone": { "type": "string" },
+        "emailNotifications": { "type": "boolean" },
+        "pushNotifications": { "type": "boolean" },
+        "userName": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "fontFamily": { "type": "string" },
+        "primaryColor": { "type": "string" },
+        "borderStyle": { "type": "string" }
+      },
+      "required": ["companyName", "theme", "language", "timezone", "emailNotifications", "pushNotifications", "userName", "userEmail", "fontFamily", "primaryColor"]
+    }
+  },
+  "firestore": {
+    "/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Enterprise QA Projects collection"
+    },
+    "/modules/{moduleId}": {
+      "schema": "Module",
+      "description": "Project Modules collection"
+    },
+    "/requirements/{requirementId}": {
+      "schema": "Requirement",
+      "description": "Feature and Product Requirements collection"
+    },
+    "/testCases/{testCaseId}": {
+      "schema": "TestCase",
+      "description": "QA Test Cases collection"
+    },
+    "/executions/{executionId}": {
+      "schema": "TestExecution",
+      "description": "Test Case execution history collection"
+    },
+    "/bugs/{bugId}": {
+      "schema": "Bug",
+      "description": "Logged bugs and defects collection"
+    },
+    "/developers/{developerId}": {
+      "schema": "Developer",
+      "description": "Developer team registry"
+    },
+    "/qaEngineers/{qaEngineerId}": {
+      "schema": "QaEngineer",
+      "description": "QA Engineers registry"
+    },
+    "/releases/{releaseId}": {
+      "schema": "Release",
+      "description": "Release management registry"
+    },
+    "/auditLogs/{logId}": {
+      "schema": "AuditLog",
+      "description": "User action and audit trail logs"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "AppNotification",
+      "description": "App alert notifications collection"
+    },
+    "/settings/{settingsId}": {
+      "schema": "SystemSettings",
+      "description": "Enterprise system preferences"
+    }
+  }
+}
