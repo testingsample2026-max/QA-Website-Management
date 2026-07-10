@@ -30,10 +30,13 @@ import {
   Database,
   Download,
   ChevronDown,
-  FileCode as FileJson
+  FileCode as FileJson,
+  FileText,
+  Presentation
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { AppNotification } from '../types';
+import { exportToWord, exportToPDF, exportToPPTX } from '../utils/officeExportUtils';
 import {
   exportProjectsToCSV,
   exportModulesToCSV,
@@ -237,6 +240,142 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
       addNotification('Export Success', `Successfully exported ${getExportPageName()} to JSON.`, 'success');
     } catch (err: any) {
       addNotification('Export Failed', err.message || 'An error occurred during JSON export.', 'error');
+    }
+  };
+
+  const getPageDataAsSections = (): { heading: string; content: string[][]; isTable: boolean; headers: string[] } | null => {
+    switch (activeTab) {
+      case 'projects':
+        return {
+          heading: 'Registered Projects',
+          headers: ['ID', 'Name', 'Description', 'Status', 'Created At'],
+          content: projects.map(p => [p.id, p.name, p.description || '', p.status, p.createdAt]),
+          isTable: true
+        };
+      case 'modules':
+        return {
+          heading: 'System Modules',
+          headers: ['ID', 'Project ID', 'Name', 'Description', 'Status'],
+          content: modules.map(m => [m.id, m.projectId, m.name, m.description || '', m.status || 'active']),
+          isTable: true
+        };
+      case 'requirements':
+        return {
+          heading: 'Product Requirements',
+          headers: ['ID', 'Project ID', 'Title', 'Priority', 'Status'],
+          content: requirements.map(r => [r.id, r.projectId, r.title, r.priority, r.status]),
+          isTable: true
+        };
+      case 'testcases':
+        return {
+          heading: 'Test Cases Repository',
+          headers: ['ID', 'Title', 'Priority', 'Status', 'Last Exec Status'],
+          content: testCases.map(t => [t.id, t.title, t.priority, t.status, t.lastExecutionStatus || 'unexecuted']),
+          isTable: true
+        };
+      case 'bugs':
+        return {
+          heading: 'Bugs / Issues Ledger',
+          headers: ['ID', 'Title', 'Severity', 'Priority', 'Status'],
+          content: bugs.map(b => [b.id, b.title, b.severity, b.priority, b.status]),
+          isTable: true
+        };
+      case 'developers':
+        return {
+          heading: 'Developers Directory',
+          headers: ['ID', 'Name', 'Email', 'Role', 'Status'],
+          content: developers.map(d => [d.id, d.name, d.email, d.role, d.status || 'active']),
+          isTable: true
+        };
+      case 'qaengineers':
+        return {
+          heading: 'QA Engineers Directory',
+          headers: ['ID', 'Name', 'Email', 'Role', 'Status'],
+          content: qaEngineers.map(q => [q.id, q.name, q.email, q.role, q.status || 'active']),
+          isTable: true
+        };
+      case 'releases':
+        return {
+          heading: 'Product Releases',
+          headers: ['ID', 'Project ID', 'Version', 'Release Date', 'Status'],
+          content: releases.map(r => [r.id, r.projectId, r.version, r.releaseDate, r.status]),
+          isTable: true
+        };
+      case 'auditlogs':
+        return {
+          heading: 'System Audit Trail Logs',
+          headers: ['Action', 'Entity Type', 'Details', 'Timestamp', 'User'],
+          content: auditLogs.slice(0, 100).map(a => [a.action, a.entityType, a.details || '', a.timestamp, a.user]),
+          isTable: true
+        };
+      default:
+        return null;
+    }
+  };
+
+  const handleExportPageWord = () => {
+    try {
+      const data = getPageDataAsSections();
+      if (!data) {
+        addNotification('Export Failed', 'This page does not support Word export.', 'warning');
+        return;
+      }
+      const title = `${data.heading} - ${settings.websiteName || 'TestEngine'}`;
+      exportToWord(title, [data], `${activeTab}_export_${new Date().toISOString().split('T')[0]}`, settings.websiteName);
+      addNotification('Export Success', `Successfully exported ${getExportPageName()} to Word (DOCX).`, 'success');
+    } catch (err: any) {
+      addNotification('Export Failed', err.message || 'An error occurred during Word export.', 'error');
+    }
+  };
+
+  const handleExportPagePDF = () => {
+    try {
+      const data = getPageDataAsSections();
+      if (!data) {
+        addNotification('Export Failed', 'This page does not support PDF export.', 'warning');
+        return;
+      }
+      const title = `${data.heading}`;
+      exportToPDF(title, [data], `${activeTab}_export_${new Date().toISOString().split('T')[0]}`, settings.websiteName);
+      addNotification('Export Success', `Successfully exported ${getExportPageName()} to PDF.`, 'success');
+    } catch (err: any) {
+      addNotification('Export Failed', err.message || 'An error occurred during PDF export.', 'error');
+    }
+  };
+
+  const handleExportPagePPTX = () => {
+    try {
+      const data = getPageDataAsSections();
+      if (!data) {
+        addNotification('Export Failed', 'This page does not support Presentation export.', 'warning');
+        return;
+      }
+      const title = `${data.heading} Report`;
+      const subtitle = `Comprehensive listing of registered ${activeTab} details.`;
+      
+      const rowsToExport = data.content.slice(0, 12);
+      const hasMore = data.content.length > 12;
+
+      const slides = [
+        {
+          title: `Overview: ${data.heading}`,
+          bullets: [
+            `Total records tracked inside active workspace: ${data.content.length}`,
+            `Exporting active subset for review: ${rowsToExport.length} items.`,
+            hasMore ? `Note: Table contains high density data. Sliced to first 12 items for visual layout compliance.` : `All registered records included successfully in presentation layout.`
+          ]
+        },
+        {
+          title: `Details: ${data.heading}`,
+          tableHeaders: data.headers,
+          tableRows: rowsToExport
+        }
+      ];
+
+      exportToPPTX(title, subtitle, slides, `${activeTab}_presentation_${new Date().toISOString().split('T')[0]}`, settings.websiteName);
+      addNotification('Export Success', `Successfully exported ${getExportPageName()} presentation.`, 'success');
+    } catch (err: any) {
+      addNotification('Export Failed', err.message || 'An error occurred during PPTX export.', 'error');
     }
   };
 
@@ -573,6 +712,37 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
                     <div className="p-1.5 space-y-0.5">
                       {hasExportablePageData() ? (
                         <>
+                          <button
+                            onClick={() => {
+                              handleExportPageWord();
+                              setIsExportOpen(false);
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-xl transition-colors cursor-pointer"
+                          >
+                            <FileText className="w-4 h-4 text-blue-500" />
+                            <span>Export Page as Word (DOCX)</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleExportPagePDF();
+                              setIsExportOpen(false);
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-xl transition-colors cursor-pointer"
+                          >
+                            <FileText className="w-4 h-4 text-red-500" />
+                            <span>Export Page as PDF</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              handleExportPagePPTX();
+                              setIsExportOpen(false);
+                            }}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-xl transition-colors cursor-pointer"
+                          >
+                            <Presentation className="w-4 h-4 text-indigo-500" />
+                            <span>Export Page as PowerPoint (PPTX)</span>
+                          </button>
+                          <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
                           <button
                             onClick={() => {
                               handleExportPageCSV();

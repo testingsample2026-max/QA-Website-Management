@@ -21,8 +21,10 @@ import {
   FileSpreadsheet,
   FileJson,
   Printer,
-  ChevronDown
+  ChevronDown,
+  Presentation
 } from 'lucide-react';
+import { exportToWord, exportToPDF, exportToPPTX } from '../utils/officeExportUtils';
 import {
   ResponsiveContainer,
   PieChart,
@@ -44,7 +46,9 @@ export const ReportsView: React.FC = () => {
     executions,
     bugs,
     projects,
-    modules
+    modules,
+    settings,
+    addNotification
   } = useApp();
 
   const [isExportOpen, setIsExportOpen] = React.useState(false);
@@ -211,6 +215,156 @@ Total Logged Defects: ${bugs.length}
     setIsExportOpen(false);
   };
 
+  const exportAsWordReport = () => {
+    try {
+      const activeBugsCount = bugs.filter(b => b.status !== 'closed' && b.status !== 'rejected').length;
+      const title = 'Executive Quality Status & Analytics Report';
+      
+      const sections = [
+        {
+          heading: '1. Executive Summary Metrics',
+          content: `Overall Quality Pass Rate: ${passRate}%\nTotal Test Cases Registered: ${totalCases}\nAutomated Test Cases: ${automatedCases} (${automationRate}% Automation Coverage)\nActive Defects Registered: ${activeBugsCount}`
+        },
+        {
+          heading: '2. Test Execution Breakdown',
+          content: [
+            ['Passed Runs', String(passed), `${totalExecs > 0 ? Math.round((passed / totalExecs) * 100) : 0}%`],
+            ['Failed Runs', String(failed), `${totalExecs > 0 ? Math.round((failed / totalExecs) * 100) : 0}%`],
+            ['Blocked Runs', String(blocked), `${totalExecs > 0 ? Math.round((blocked / totalExecs) * 100) : 0}%`],
+            ['Retest Required', String(retest), `${totalExecs > 0 ? Math.round((retest / totalExecs) * 100) : 0}%`]
+          ],
+          isTable: true,
+          headers: ['Status Flag', 'Total Count', 'Percentage Coverage']
+        },
+        {
+          heading: '3. Defect Severity Density',
+          content: [
+            ['Critical Severity', String(critBugs)],
+            ['High Severity', String(highBugs)],
+            ['Medium Severity', String(medBugs)],
+            ['Low Severity', String(lowBugs)]
+          ],
+          isTable: true,
+          headers: ['Severity Tier', 'Total Registered Defects']
+        },
+        {
+          heading: '4. System Context & Inventory',
+          content: `Active Projects Enrolled: ${projects.length}\nActive Modules Registered: ${modules.length}\nTotal Defect Reports logged: ${bugs.length}`
+        }
+      ];
+
+      exportToWord(title, sections, `QA-Quality-Report-${new Date().toISOString().split('T')[0]}`, settings?.websiteName || 'TestEngine');
+      addNotification('Export Success', 'Successfully exported quality status report to Word (DOCX).', 'success');
+    } catch (err: any) {
+      console.error(err);
+      addNotification('Export Failed', err.message || 'An error occurred during Word export.', 'error');
+    }
+    setIsExportOpen(false);
+  };
+
+  const exportAsPDFReport = () => {
+    try {
+      const activeBugsCount = bugs.filter(b => b.status !== 'closed' && b.status !== 'rejected').length;
+      const title = 'Executive Quality Status Report';
+      
+      const sections = [
+        {
+          heading: '1. Executive Summary Metrics',
+          content: `Overall Quality Pass Rate: ${passRate}%\nTotal Test Cases: ${totalCases}\nAutomated Test Cases: ${automatedCases} (${automationRate}% Automation Coverage)\nActive Defects Count: ${activeBugsCount}`
+        },
+        {
+          heading: '2. Test Execution Breakdown',
+          content: [
+            ['Passed Runs', String(passed), `${totalExecs > 0 ? Math.round((passed / totalExecs) * 100) : 0}%`],
+            ['Failed Runs', String(failed), `${totalExecs > 0 ? Math.round((failed / totalExecs) * 100) : 0}%`],
+            ['Blocked Runs', String(blocked), `${totalExecs > 0 ? Math.round((blocked / totalExecs) * 100) : 0}%`],
+            ['Retest Required', String(retest), `${totalExecs > 0 ? Math.round((retest / totalExecs) * 100) : 0}%`]
+          ],
+          isTable: true,
+          headers: ['Execution Status', 'Total Counts', 'Percentage Coverage']
+        },
+        {
+          heading: '3. Defect Severity Density',
+          content: [
+            ['Critical Severity', String(critBugs)],
+            ['High Severity', String(highBugs)],
+            ['Medium Severity', String(medBugs)],
+            ['Low Severity', String(lowBugs)]
+          ],
+          isTable: true,
+          headers: ['Severity Level', 'Defects Count']
+        },
+        {
+          heading: '4. System Context & Inventory',
+          content: `Projects Enrolled: ${projects.length}\nModules Registered: ${modules.length}\nTotal Defects Logged: ${bugs.length}`
+        }
+      ];
+
+      exportToPDF(title, sections, `QA-Quality-Report-${new Date().toISOString().split('T')[0]}`, settings?.websiteName || 'TestEngine');
+      addNotification('Export Success', 'Successfully exported quality status report to PDF.', 'success');
+    } catch (err: any) {
+      console.error(err);
+      addNotification('Export Failed', err.message || 'An error occurred during PDF export.', 'error');
+    }
+    setIsExportOpen(false);
+  };
+
+  const exportAsPPTXReport = () => {
+    try {
+      const activeBugsCount = bugs.filter(b => b.status !== 'closed' && b.status !== 'rejected').length;
+      const title = 'Executive QA Status & Analytics Report';
+      const subtitle = `Comprehensive Quality Assurance Audit | Run Rate: ${passRate}%`;
+
+      const slides = [
+        {
+          title: 'Executive Metrics Highlights',
+          bullets: [
+            `Quality Pass Rate: Over ${passRate}% of test execution steps successfully verified.`,
+            `Test Inventory: Total ${totalCases} test cases defined inside the workspace.`,
+            `Automation Ratio: ${automationRate}% of cases automated (${automatedCases} automated vs. ${totalCases - automatedCases} manual).`,
+            `Defect Footprint: ${activeBugsCount} active defects requiring validation.`
+          ]
+        },
+        {
+          title: 'Test Execution Breakdown',
+          tableHeaders: ['Execution Status Flag', 'Total Counts', 'Percentage Coverage'],
+          tableRows: [
+            ['Passed Runs', String(passed), `${totalExecs > 0 ? Math.round((passed / totalExecs) * 100) : 0}%`],
+            ['Failed Runs', String(failed), `${totalExecs > 0 ? Math.round((failed / totalExecs) * 100) : 0}%`],
+            ['Blocked Runs', String(blocked), `${totalExecs > 0 ? Math.round((blocked / totalExecs) * 100) : 0}%`],
+            ['Retest Required', String(retest), `${totalExecs > 0 ? Math.round((retest / totalExecs) * 100) : 0}%`]
+          ]
+        },
+        {
+          title: 'Defect Severity Profile',
+          tableHeaders: ['Severity Classification Tier', 'Total Defect Count'],
+          tableRows: [
+            ['Critical Severity Defects', String(critBugs)],
+            ['High Severity Defects', String(highBugs)],
+            ['Medium Severity Defects', String(medBugs)],
+            ['Low Severity Defects', String(lowBugs)]
+          ]
+        },
+        {
+          title: 'System Scope & Assets',
+          bullets: [
+            `Corporate Workspace Infrastructure is active and tracking live projects.`,
+            `Registered Projects: ${projects.length} independent initiatives enrolled.`,
+            `System Modules: ${modules.length} business components mapped under test suites.`,
+            `Cumulative Audit History: ${totalExecs} total individual trial steps logs logged.`
+          ]
+        }
+      ];
+
+      exportToPPTX(title, subtitle, slides, `QA-Executive-Summary-${new Date().toISOString().split('T')[0]}`, settings?.websiteName || 'TestEngine');
+      addNotification('Export Success', 'Successfully exported quality status report presentation.', 'success');
+    } catch (err: any) {
+      console.error(err);
+      addNotification('Export Failed', err.message || 'An error occurred during PPTX export.', 'error');
+    }
+    setIsExportOpen(false);
+  };
+
   const printReport = () => {
     setIsExportOpen(false);
     window.print();
@@ -259,6 +413,28 @@ Total Logged Defects: ${bugs.length}
               />
               <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-xl shadow-lg py-1.5 z-20">
                 <button
+                  onClick={exportAsWordReport}
+                  className="w-full px-4 py-2 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-850 flex items-center gap-2 cursor-pointer"
+                >
+                  <FileText className="w-4 h-4 text-blue-500" />
+                  <span>Executive Report (Word / DOCX)</span>
+                </button>
+                <button
+                  onClick={exportAsPDFReport}
+                  className="w-full px-4 py-2 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-850 flex items-center gap-2 cursor-pointer"
+                >
+                  <FileText className="w-4 h-4 text-red-500" />
+                  <span>Executive Report (PDF / jsPDF)</span>
+                </button>
+                <button
+                  onClick={exportAsPPTXReport}
+                  className="w-full px-4 py-2 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-850 flex items-center gap-2 cursor-pointer"
+                >
+                  <Presentation className="w-4 h-4 text-indigo-500" />
+                  <span>Presentation Slide Deck (PPTX)</span>
+                </button>
+                <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
+                <button
                   onClick={exportAsJSON}
                   className="w-full px-4 py-2 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-850 flex items-center gap-2 cursor-pointer"
                 >
@@ -276,7 +452,7 @@ Total Logged Defects: ${bugs.length}
                   onClick={exportAsMarkdown}
                   className="w-full px-4 py-2 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-850 flex items-center gap-2 cursor-pointer"
                 >
-                  <FileText className="w-4 h-4 text-indigo-500" />
+                  <FileText className="w-4 h-4 text-slate-500" />
                   <span>Quality Document (Markdown)</span>
                 </button>
                 <div className="h-px bg-slate-100 dark:bg-slate-800 my-1" />
