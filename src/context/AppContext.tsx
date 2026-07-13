@@ -44,6 +44,8 @@ interface AppContextType {
   // Dashboard calculated stats
   stats: {
     projectsCount: number;
+    websiteProjectsCount: number;
+    mobileProjectsCount: number;
     modulesCount: number;
     developersCount: number;
     qaCount: number;
@@ -53,6 +55,8 @@ interface AppContextType {
     failedCount: number;
     blockedCount: number;
     retestCount: number;
+    testingCount: number;
+    unexecutedCount: number;
     openBugsCount: number;
     closedBugsCount: number;
   };
@@ -112,6 +116,12 @@ interface AppContextType {
   // Import/Export
   exportData: () => string;
   importData: (jsonData: string) => { success: boolean; error?: string };
+
+  // Global filters for redirection from Dashboard
+  testCaseFilter: string;
+  setTestCaseFilter: (val: string) => void;
+  bugFilter: string;
+  setBugFilter: (val: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -139,6 +149,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [executions, setExecutions] = useState<TestExecution[]>([]);
   const [bugs, setBugs] = useState<Bug[]>([]);
+  const [testCaseFilter, setTestCaseFilter] = useState<string>('all');
+  const [bugFilter, setBugFilter] = useState<string>('all');
   const [developers, setDevelopers] = useState<Developer[]>([]);
   const [qaEngineers, setQaEngineers] = useState<QaEngineer[]>([]);
   const [releases, setReleases] = useState<Release[]>([]);
@@ -333,18 +345,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const developersCount = developers.length;
     const qaCount = qaEngineers.length;
     const testCasesCount = testCases.length;
+
+    const websiteProjectsCount = projects.filter(p => {
+      if (p.type === 'website') return true;
+      if (p.type === 'mobile_app') return false;
+      const searchStr = (p.name + ' ' + (p.description || '')).toLowerCase();
+      return !searchStr.includes('mobile') && !searchStr.includes('app') && !searchStr.includes('android') && !searchStr.includes('ios');
+    }).length;
+
+    const mobileProjectsCount = projects.filter(p => {
+      if (p.type === 'mobile_app') return true;
+      if (p.type === 'website') return false;
+      const searchStr = (p.name + ' ' + (p.description || '')).toLowerCase();
+      return searchStr.includes('mobile') || searchStr.includes('app') || searchStr.includes('android') || searchStr.includes('ios');
+    }).length;
     
-    const executedCount = executions.length;
-    const passedCount = executions.filter(e => e.status === 'passed').length;
-    const failedCount = executions.filter(e => e.status === 'failed').length;
-    const blockedCount = executions.filter(e => e.status === 'blocked').length;
-    const retestCount = executions.filter(e => e.status === 'retest').length;
+    const passedCount = testCases.filter(tc => tc.lastExecutionStatus === 'passed').length;
+    const failedCount = testCases.filter(tc => tc.lastExecutionStatus === 'failed').length;
+    const blockedCount = testCases.filter(tc => tc.lastExecutionStatus === 'blocked').length;
+    const retestCount = testCases.filter(tc => tc.lastExecutionStatus === 'retest').length;
+    const testingCount = testCases.filter(tc => tc.lastExecutionStatus === 'testing').length;
+    const executedCount = passedCount + failedCount + blockedCount + retestCount;
 
     const openBugsCount = bugs.filter(b => b.status !== 'closed' && b.status !== 'rejected').length;
     const closedBugsCount = bugs.filter(b => b.status === 'closed' || b.status === 'rejected').length;
+    const unexecutedCount = testCasesCount - executedCount;
 
     return {
       projectsCount,
+      websiteProjectsCount,
+      mobileProjectsCount,
       modulesCount,
       developersCount,
       qaCount,
@@ -354,6 +384,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       failedCount,
       blockedCount,
       retestCount,
+      testingCount,
+      unexecutedCount,
       openBugsCount,
       closedBugsCount
     };
@@ -1270,7 +1302,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateSettings,
 
       exportData,
-      importData
+      importData,
+
+      testCaseFilter,
+      setTestCaseFilter,
+      bugFilter,
+      setBugFilter
     }}>
       {children}
     </AppContext.Provider>

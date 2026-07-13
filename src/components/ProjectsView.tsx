@@ -61,6 +61,7 @@ export const ProjectsView: React.FC = () => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<'active' | 'archived'>('active');
+  const [projectType, setProjectType] = useState<'website' | 'mobile_app'>('website');
   const [formError, setFormError] = useState('');
 
   // Delete Confirmation State
@@ -90,12 +91,14 @@ export const ProjectsView: React.FC = () => {
     const res = addProject({
       name: name.trim(),
       description: description.trim(),
-      status: 'active'
+      status: 'active',
+      type: projectType
     });
 
     if (res.success) {
       setName('');
       setDescription('');
+      setProjectType('website');
       setIsCreateOpen(false);
     } else {
       setFormError(res.error || 'Failed to create project');
@@ -115,7 +118,8 @@ export const ProjectsView: React.FC = () => {
     const res = updateProject(selectedProject.id, {
       name: name.trim(),
       description: description.trim(),
-      status
+      status,
+      type: projectType
     });
 
     if (res.success) {
@@ -132,6 +136,7 @@ export const ProjectsView: React.FC = () => {
     setName(proj.name);
     setDescription(proj.description);
     setStatus(proj.status);
+    setProjectType(proj.type || 'website');
     setFormError('');
     setIsEditOpen(true);
   };
@@ -289,7 +294,7 @@ export const ProjectsView: React.FC = () => {
 
           {/* Add Project Action Button */}
           <button
-            onClick={() => { setName(''); setDescription(''); setFormError(''); setIsCreateOpen(true); }}
+            onClick={() => { setName(''); setDescription(''); setProjectType('website'); setFormError(''); setIsCreateOpen(true); }}
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs sm:text-sm rounded-xl shadow-sm transition-all active:scale-[0.98] cursor-pointer"
           >
             <Plus className="w-4 h-4" />
@@ -357,6 +362,7 @@ export const ProjectsView: React.FC = () => {
                       <ArrowUpDown className="w-3 h-3 text-slate-400" />
                     </div>
                   </th>
+                  <th className="p-4">Type</th>
                   <th className="p-4">Description</th>
                   <th className="p-4 w-24">Status</th>
                   <th className="p-4 w-28 text-right">Actions</th>
@@ -383,6 +389,15 @@ export const ProjectsView: React.FC = () => {
                     </td>
                     <td className="p-4 font-semibold text-slate-800 dark:text-slate-200">
                       {p.name}
+                    </td>
+                    <td className="p-4">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase ${
+                        (p.type || 'website') === 'website'
+                          ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400'
+                          : 'bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-400'
+                      }`}>
+                        {(p.type || 'website') === 'website' ? 'Website' : 'Mobile App'}
+                      </span>
                     </td>
                     <td className="p-4 text-slate-500 dark:text-slate-400 max-w-xs truncate">
                       {p.description || <span className="text-slate-300 italic">No description</span>}
@@ -504,6 +519,20 @@ export const ProjectsView: React.FC = () => {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wide">
+                  Project Type
+                </label>
+                <select
+                  value={projectType}
+                  onChange={(e) => setProjectType(e.target.value as 'website' | 'mobile_app')}
+                  className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-250 text-sm rounded-xl focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                >
+                  <option value="website">Website</option>
+                  <option value="mobile_app">Mobile App</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wide">
                   Description
                 </label>
                 <textarea
@@ -571,6 +600,20 @@ export const ProjectsView: React.FC = () => {
                   className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
                   required
                 />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wide">
+                  Project Type
+                </label>
+                <select
+                  value={projectType}
+                  onChange={(e) => setProjectType(e.target.value as 'website' | 'mobile_app')}
+                  className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-250 text-sm rounded-xl focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                >
+                  <option value="website">Website</option>
+                  <option value="mobile_app">Mobile App</option>
+                </select>
               </div>
 
               <div className="space-y-1.5">

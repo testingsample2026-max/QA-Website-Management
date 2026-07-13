@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Bug } from '../types';
 import { EmptyState } from './EmptyState';
@@ -40,7 +40,9 @@ export const BugsView: React.FC = () => {
     deleteBug,
     bulkUpdate,
     bulkDelete,
-    addNotification
+    addNotification,
+    bugFilter,
+    setBugFilter
   } = useApp();
 
   // Filter States
@@ -50,6 +52,13 @@ export const BugsView: React.FC = () => {
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+
+  useEffect(() => {
+    if (bugFilter && bugFilter !== 'all') {
+      setStatusFilter(bugFilter);
+      setBugFilter('all');
+    }
+  }, [bugFilter, setBugFilter]);
 
   const [sortBy, setSortBy] = useState<'title' | 'id' | 'severity'>('id');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc'); // default latest first
@@ -311,7 +320,13 @@ export const BugsView: React.FC = () => {
     const matchesModule = moduleFilter === 'all' || b.moduleId === moduleFilter;
     const matchesSeverity = severityFilter === 'all' || b.severity === severityFilter;
     const matchesPriority = priorityFilter === 'all' || b.priority === priorityFilter;
-    const matchesStatus = statusFilter === 'all' || b.status === statusFilter;
+    const matchesStatus = statusFilter === 'all'
+      ? true
+      : statusFilter === 'open'
+        ? b.status !== 'closed' && b.status !== 'rejected'
+        : statusFilter === 'closed'
+          ? b.status === 'closed' || b.status === 'rejected'
+          : b.status === statusFilter;
     return matchesSearch && matchesProject && matchesModule && matchesSeverity && matchesPriority && matchesStatus;
   });
 

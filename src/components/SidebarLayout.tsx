@@ -245,6 +245,85 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
 
   const getPageDataAsSections = (): { heading: string; content: string[][]; isTable: boolean; headers: string[] } | null => {
     switch (activeTab) {
+      case 'dashboard':
+        return {
+          heading: 'Executive Dashboard Summary',
+          headers: ['Metric Category', 'Key Performance Indicator (KPI)', 'Status Count / Value'],
+          content: [
+            ['Workspace Assets', 'Total Registered Projects', String(stats.projectsCount)],
+            ['Workspace Assets', 'Total System Modules', String(stats.modulesCount)],
+            ['Quality Metrics', 'QA Test Cases Definition', String(stats.testCasesCount)],
+            ['Execution Status', 'Total Executed Test Runs', String(stats.executedCount)],
+            ['Execution Status', '  - Passed Executions', String(stats.passedCount)],
+            ['Execution Status', '  - Failed Executions', String(stats.failedCount)],
+            ['Execution Status', '  - Blocked Executions', String(stats.blockedCount)],
+            ['Execution Status', '  - Retest Required', String(stats.retestCount)],
+            ['Execution Status', '  - In Testing', String(stats.testingCount)],
+            ['Execution Status', 'Total Unexecuted Cases', String(stats.unexecutedCount)],
+            ['Defect Metrics', 'Open / Active Bugs Tracking', String(stats.openBugsCount)],
+            ['Defect Metrics', 'Closed / Rejected Bugs', String(stats.closedBugsCount)],
+          ],
+          isTable: true
+        };
+      case 'reports': {
+        const totalCases = testCases.length;
+        const automatedCases = testCases.filter(c => c.type === 'automated').length;
+        const automationRate = totalCases > 0 ? Math.round((automatedCases / totalCases) * 100) : 0;
+        const totalExecs = executions.length;
+        const passedExecs = executions.filter(e => e.status === 'passed').length;
+        const failedExecs = executions.filter(e => e.status === 'failed').length;
+        const blockedExecs = executions.filter(e => e.status === 'blocked').length;
+        const retestExecs = executions.filter(e => e.status === 'retest').length;
+        const passRate = totalExecs > 0 ? Math.round((passedExecs / totalExecs) * 100) : 0;
+        const activeBugsCount = bugs.filter(b => b.status !== 'closed' && b.status !== 'rejected').length;
+        const critBugs = bugs.filter(b => b.severity === 'critical').length;
+        const highBugs = bugs.filter(b => b.severity === 'high').length;
+        const medBugs = bugs.filter(b => b.severity === 'medium').length;
+        const lowBugs = bugs.filter(b => b.severity === 'low').length;
+
+        return {
+          heading: 'Quality Assurance Status & Analytics Report',
+          headers: ['Analysis Category', 'Report Metric Detail', 'Percentage / Metric Value'],
+          content: [
+            ['Executive Quality Indicator', 'Overall Quality Pass Rate', `${passRate}%`],
+            ['Executive Quality Indicator', 'Total Executions Logged', String(totalExecs)],
+            ['Executive Quality Indicator', 'Total Registered Projects', String(projects.length)],
+            ['Test Case Distribution', 'Total Test Cases', String(totalCases)],
+            ['Test Case Distribution', 'Automated Test Cases', `${automatedCases} (${automationRate}% Automation Coverage)`],
+            ['Execution Outcomes Breakdown', 'Passed Runs', String(passedExecs)],
+            ['Execution Outcomes Breakdown', 'Failed Runs', String(failedExecs)],
+            ['Execution Outcomes Breakdown', 'Blocked Runs', String(blockedExecs)],
+            ['Execution Outcomes Breakdown', 'Retest Required Runs', String(retestExecs)],
+            ['Defect Severity Density', 'Active / Open Defects Count', String(activeBugsCount)],
+            ['Defect Severity Density', 'Total Defects Logged', String(bugs.length)],
+            ['Defect Severity Density', '  - Critical Severity Bugs', String(critBugs)],
+            ['Defect Severity Density', '  - High Severity Bugs', String(highBugs)],
+            ['Defect Severity Density', '  - Medium Severity Bugs', String(medBugs)],
+            ['Defect Severity Density', '  - Low Severity Bugs', String(lowBugs)],
+          ],
+          isTable: true
+        };
+      }
+      case 'settings':
+        return {
+          heading: 'Enterprise Workspace Configuration Settings',
+          headers: ['Configuration Key', 'Setting Value'],
+          content: [
+            ['Company Name', settings.companyName],
+            ['Workspace Name', settings.websiteName || 'TestEngine'],
+            ['User Name', settings.userName],
+            ['User Email', settings.userEmail],
+            ['Language Preference', settings.language],
+            ['Timezone', settings.timezone],
+            ['Theme Style', settings.theme],
+            ['Email Notifications Enabled', settings.emailNotifications ? 'Yes' : 'No'],
+            ['Push Notifications Enabled', settings.pushNotifications ? 'Yes' : 'No'],
+            ['Primary Brand Color Accent', settings.primaryColor],
+            ['Font Family Style', settings.fontFamily || 'sans'],
+            ['Border Style', settings.borderStyle || 'lite']
+          ],
+          isTable: true
+        };
       case 'projects':
         return {
           heading: 'Registered Projects',

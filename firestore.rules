@@ -24,13 +24,14 @@ service cloud.firestore {
 
     function isValidProject(data) {
       return data.keys().hasAll(['id', 'name', 'description', 'status', 'createdAt', 'updatedAt'])
-        && data.keys().size() == 6
+        && (data.keys().size() == 6 || (data.keys().size() == 7 && data.keys().hasAll(['type'])))
         && isValidId(data.id)
         && data.name is string && data.name.size() > 0 && data.name.size() <= 200
         && data.description is string && data.description.size() <= 2000
         && data.status is string && data.status.size() <= 50
         && data.createdAt is string && data.createdAt.size() <= 50
-        && data.updatedAt is string && data.updatedAt.size() <= 50;
+        && data.updatedAt is string && data.updatedAt.size() <= 50
+        && (!data.keys().hasAll(['type']) || (data.type is string && (data.type == 'website' || data.type == 'mobile_app')));
     }
 
     function isValidModule(data) {
@@ -166,7 +167,7 @@ service cloud.firestore {
 
     function isValidSettings(data) {
       return data.keys().hasAll(['companyName', 'theme', 'language', 'timezone', 'emailNotifications', 'pushNotifications', 'userName', 'userEmail', 'fontFamily', 'primaryColor'])
-        && (data.keys().size() == 10 || (data.keys().size() == 11 && data.keys().hasAny(['borderStyle'])))
+        && (data.keys().size() <= 13)
         && data.companyName is string && data.companyName.size() <= 200
         && data.theme is string && data.theme.size() <= 50
         && data.language is string && data.language.size() <= 50
@@ -176,7 +177,9 @@ service cloud.firestore {
         && data.userName is string && data.userName.size() <= 200
         && data.userEmail is string && data.userEmail.size() <= 200 && data.userEmail.matches('^.+@.+\\..+$')
         && data.fontFamily is string && data.fontFamily.size() <= 50
-        && data.primaryColor is string && data.primaryColor.size() <= 50;
+        && data.primaryColor is string && data.primaryColor.size() <= 50
+        && (!data.keys().hasAny(['borderStyle']) || data.borderStyle is string)
+        && (!data.keys().hasAny(['websiteName']) || data.websiteName is string);
     }
 
     // --- MATCH BLOCKS ---

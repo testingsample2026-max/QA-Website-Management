@@ -10,7 +10,8 @@
         "description": { "type": "string" },
         "status": { "type": "string" },
         "createdAt": { "type": "string" },
-        "updatedAt": { "type": "string" }
+        "updatedAt": { "type": "string" },
+        "type": { "type": "string", "enum": ["website", "mobile_app"] }
       },
       "required": ["id", "name", "description", "status", "createdAt", "updatedAt"]
     },
@@ -191,6 +192,7 @@
         "pushNotifications": { "type": "boolean" },
         "userName": { "type": "string" },
         "userEmail": { "type": "string" },
+        "websiteName": { "type": "string" },
         "fontFamily": { "type": "string" },
         "primaryColor": { "type": "string" },
         "borderStyle": { "type": "string" }

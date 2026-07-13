@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { TestCase, TestExecution } from '../types';
 import { EmptyState } from './EmptyState';
@@ -25,6 +25,7 @@ import {
   AlertTriangle,
   Clock,
   Play,
+  Activity,
   History,
   ShieldCheck,
   Layers,
@@ -51,7 +52,9 @@ export const TestCasesView: React.FC = () => {
     addTestExecution,
     bulkUpdate,
     bulkDelete,
-    addNotification
+    addNotification,
+    testCaseFilter,
+    setTestCaseFilter
   } = useApp();
 
   // Search & Filter state
@@ -62,6 +65,13 @@ export const TestCasesView: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [execStatusFilter, setExecStatusFilter] = useState<string>('all');
+
+  useEffect(() => {
+    if (testCaseFilter && testCaseFilter !== 'all') {
+      setExecStatusFilter(testCaseFilter);
+      setTestCaseFilter('all');
+    }
+  }, [testCaseFilter, setTestCaseFilter]);
 
   const [sortBy, setSortBy] = useState<'title' | 'id' | 'priority'>('title');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -409,6 +419,8 @@ export const TestCasesView: React.FC = () => {
         return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 text-[10px] font-bold uppercase shrink-0"><AlertTriangle className="w-3 h-3" />Blocked</span>;
       case 'retest':
         return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-50 dark:bg-cyan-950/30 text-cyan-700 dark:text-cyan-400 text-[10px] font-bold uppercase shrink-0"><Clock className="w-3 h-3" />Retest</span>;
+      case 'testing':
+        return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-400 text-[10px] font-bold uppercase shrink-0"><Activity className="w-3.5 h-3.5 animate-pulse" />In Testing</span>;
       default:
         return <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase shrink-0">Unexecuted</span>;
     }
@@ -424,7 +436,11 @@ export const TestCasesView: React.FC = () => {
     const matchesPriority = priorityFilter === 'all' || tc.priority === priorityFilter;
     const matchesType = typeFilter === 'all' || tc.type === typeFilter;
     const matchesStatus = statusFilter === 'all' || tc.status === statusFilter;
-    const matchesExecStatus = execStatusFilter === 'all' || tc.lastExecutionStatus === execStatusFilter;
+    const matchesExecStatus = execStatusFilter === 'all'
+      ? true
+      : execStatusFilter === 'unexecuted'
+        ? tc.lastExecutionStatus === 'unexecuted' || tc.lastExecutionStatus === 'testing'
+        : tc.lastExecutionStatus === execStatusFilter;
     
     return matchesSearch && matchesProject && matchesModule && matchesPriority && matchesType && matchesStatus && matchesExecStatus;
   });

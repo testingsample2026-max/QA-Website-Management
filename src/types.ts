@@ -10,6 +10,7 @@ export interface Project {
   status: 'active' | 'archived';
   createdAt: string;
   updatedAt: string;
+  type?: 'website' | 'mobile_app';
 }
 
 export interface Module {
@@ -45,7 +46,7 @@ export interface TestCase {
   priority: 'low' | 'medium' | 'high' | 'critical';
   type: 'manual' | 'automated';
   status: 'active' | 'draft' | 'deprecated' | 'archived';
-  lastExecutionStatus: 'passed' | 'failed' | 'blocked' | 'retest' | 'unexecuted';
+  lastExecutionStatus: 'passed' | 'failed' | 'blocked' | 'retest' | 'unexecuted' | 'testing';
   assignedQaId: string | null;
   createdAt: string;
 }
@@ -55,7 +56,7 @@ export interface TestExecution {
   testCaseId: string;
   projectId: string;
   moduleId: string;
-  status: 'passed' | 'failed' | 'blocked' | 'retest';
+  status: 'passed' | 'failed' | 'blocked' | 'retest' | 'testing';
   executedById: string; // QA Engineer ID
   executionDate: string;
   notes: string;
