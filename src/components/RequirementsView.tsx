@@ -20,7 +20,8 @@ import {
   X,
   FileText,
   Bookmark,
-  Layers
+  Layers,
+  Eye
 } from 'lucide-react';
 
 export const RequirementsView: React.FC = () => {
@@ -28,6 +29,8 @@ export const RequirementsView: React.FC = () => {
     requirements,
     projects,
     modules,
+    testCases,
+    bugs,
     addRequirement,
     updateRequirement,
     deleteRequirement,
@@ -58,6 +61,8 @@ export const RequirementsView: React.FC = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedRequirement, setSelectedRequirement] = useState<Requirement | null>(null);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [viewRequirement, setViewRequirement] = useState<Requirement | null>(null);
 
   // Form Fields state
   const [title, setTitle] = useState('');
@@ -467,9 +472,9 @@ export const RequirementsView: React.FC = () => {
                       <td className="p-4 font-mono font-bold text-xs text-indigo-600 dark:text-indigo-400">
                         {r.id}
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 cursor-pointer" onClick={() => { setViewRequirement(r); setIsViewOpen(true); }}>
                         <div className="flex flex-col">
-                          <span className="font-semibold text-slate-800 dark:text-slate-200">{r.title}</span>
+                          <span className="font-semibold text-slate-800 dark:text-slate-200 hover:text-indigo-650 dark:hover:text-indigo-400 transition-colors">{r.title}</span>
                           <span className="text-[11px] text-slate-450 dark:text-slate-500 mt-1 truncate max-w-[200px]">
                             {r.description || <em className="text-slate-300">No description</em>}
                           </span>
@@ -508,6 +513,15 @@ export const RequirementsView: React.FC = () => {
                         </span>
                       </td>
                       <td className="p-4 text-right flex items-center justify-end gap-1.5">
+                        {/* View Details */}
+                        <button
+                          onClick={() => { setViewRequirement(r); setIsViewOpen(true); }}
+                          title="View Requirement Details"
+                          className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+
                         {/* Duplicate */}
                         <button
                           onClick={() => duplicateRequirement(r.id)}
@@ -886,6 +900,173 @@ export const RequirementsView: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW REQUIREMENT DETAILS MODAL */}
+      {isViewOpen && viewRequirement && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div onClick={() => { setIsViewOpen(false); setViewRequirement(null); }} className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs" />
+          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col max-h-[85vh]">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-850 bg-slate-50/50 dark:bg-slate-950/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl text-indigo-600 dark:text-indigo-400">
+                  <Bookmark className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 px-2 py-0.5 rounded">
+                    {viewRequirement.id}
+                  </span>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white mt-1 leading-snug">
+                    Requirement View Profile
+                  </h3>
+                </div>
+              </div>
+              <button 
+                onClick={() => { setIsViewOpen(false); setViewRequirement(null); }} 
+                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-6">
+              {/* Requirement Title */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Requirement Title</h4>
+                <p className="text-lg font-bold text-slate-850 dark:text-slate-100 font-sans">
+                  {viewRequirement.title}
+                </p>
+              </div>
+
+              {/* Grid of details */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50/50 dark:bg-slate-950/20 p-4 rounded-xl border border-slate-100 dark:border-slate-850">
+                <div>
+                  <span className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider">Project</span>
+                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate block mt-0.5">
+                    {projects.find(p => p.id === viewRequirement.projectId)?.name || viewRequirement.projectId}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider">System Module</span>
+                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate block mt-0.5">
+                    {modules.find(m => m.id === viewRequirement.moduleId)?.name || viewRequirement.moduleId}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider">Priority Badge</span>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase mt-1 ${
+                    viewRequirement.priority === 'critical' ? 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400' :
+                    viewRequirement.priority === 'high' ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-450' :
+                    viewRequirement.priority === 'medium' ? 'bg-yellow-50 dark:bg-yellow-950/30 text-yellow-700 dark:text-yellow-550' :
+                    'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400'
+                  }`}>
+                    {viewRequirement.priority}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[10px] font-bold text-slate-450 uppercase tracking-wider">Current Status</span>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase mt-1 ${
+                    viewRequirement.status === 'approved' ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400' :
+                    viewRequirement.status === 'implemented' ? 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-400' :
+                    viewRequirement.status === 'draft' ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400' :
+                    'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400'
+                  }`}>
+                    {viewRequirement.status}
+                  </span>
+                </div>
+              </div>
+
+              {/* Requirement Description */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Description Statement</h4>
+                <div className="bg-slate-50/20 dark:bg-slate-950/10 border border-slate-150 dark:border-slate-800 p-4 rounded-xl text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                  {viewRequirement.description || <em className="text-slate-400">No descriptive specification logged for this requirement.</em>}
+                </div>
+              </div>
+
+              {/* Traced Test Cases (Coverage) */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center justify-between">
+                  <span>Traced Test Coverage</span>
+                  <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-450 rounded-full text-[10px] font-bold font-mono">
+                    {testCases.filter(t => t.moduleId === viewRequirement.moduleId).length} Cases
+                  </span>
+                </h4>
+                {testCases.filter(t => t.moduleId === viewRequirement.moduleId).length === 0 ? (
+                  <p className="text-xs text-slate-450 italic p-3 bg-slate-50/50 dark:bg-slate-950/20 rounded-xl border border-slate-100 dark:border-slate-850">
+                    No active test cases are tracing this requirement currently. Add a test case with the same module to establish coverage.
+                  </p>
+                ) : (
+                  <div className="border border-slate-150 dark:border-slate-800/80 rounded-xl overflow-hidden max-h-44 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-850">
+                    {testCases.filter(t => t.moduleId === viewRequirement.moduleId).map(tc => (
+                      <div key={tc.id} className="p-3 bg-white dark:bg-slate-900 flex items-center justify-between text-xs hover:bg-slate-50/50 dark:hover:bg-slate-850/20 transition-colors">
+                        <div className="flex items-center gap-2 min-w-0 pr-2">
+                          <span className="font-mono text-[10px] font-bold text-slate-450 shrink-0">{tc.id}</span>
+                          <span className="font-semibold text-slate-700 dark:text-slate-300 truncate">{tc.title}</span>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase shrink-0 ${
+                          tc.lastExecutionStatus === 'passed' ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400' :
+                          tc.lastExecutionStatus === 'failed' ? 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400' :
+                          tc.lastExecutionStatus === 'blocked' ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-700' :
+                          tc.lastExecutionStatus === 'retest' ? 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700' :
+                          'bg-slate-100 dark:bg-slate-800 text-slate-500'
+                        }`}>
+                          {tc.lastExecutionStatus || 'unexecuted'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Traced Bugs */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center justify-between">
+                  <span>Linked Active Bugs</span>
+                  <span className="px-2 py-0.5 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-450 rounded-full text-[10px] font-bold font-mono">
+                    {bugs.filter(b => b.moduleId === viewRequirement.moduleId && b.status !== 'closed' && b.status !== 'rejected').length} Open
+                  </span>
+                </h4>
+                {bugs.filter(b => b.moduleId === viewRequirement.moduleId).length === 0 ? (
+                  <p className="text-xs text-slate-450 italic p-3 bg-slate-50/50 dark:bg-slate-950/20 rounded-xl border border-slate-100 dark:border-slate-850">
+                    No active defects are mapped to this module level.
+                  </p>
+                ) : (
+                  <div className="border border-slate-150 dark:border-slate-800/80 rounded-xl overflow-hidden max-h-44 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-850">
+                    {bugs.filter(b => b.moduleId === viewRequirement.moduleId).map(b => (
+                      <div key={b.id} className="p-3 bg-white dark:bg-slate-900 flex items-center justify-between text-xs hover:bg-slate-50/50 dark:hover:bg-slate-850/20 transition-colors">
+                        <div className="flex items-center gap-2 min-w-0 pr-2">
+                          <span className="font-mono text-[10px] font-bold text-red-500 shrink-0">{b.id}</span>
+                          <span className="font-semibold text-slate-700 dark:text-slate-300 truncate">{b.title}</span>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase shrink-0 ${
+                          b.status === 'closed' || b.status === 'rejected' ? 'bg-slate-100 text-slate-500 dark:bg-slate-800' :
+                          b.severity === 'critical' ? 'bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400 font-bold' :
+                          'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400'
+                        }`}>
+                          {b.status} • {b.severity}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-100 dark:border-slate-850 bg-slate-50/50 dark:bg-slate-950/20 flex justify-end gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => { setIsViewOpen(false); setViewRequirement(null); }}
+                className="px-4 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-350 text-xs font-semibold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                Close View
+              </button>
+            </div>
           </div>
         </div>
       )}

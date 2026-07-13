@@ -32,7 +32,8 @@ import {
   BookOpen,
   Info,
   Paperclip,
-  UploadCloud
+  UploadCloud,
+  Eye
 } from 'lucide-react';
 
 export const TestCasesView: React.FC = () => {
@@ -43,6 +44,8 @@ export const TestCasesView: React.FC = () => {
     requirements,
     qaEngineers,
     executions,
+    bugs,
+    developers,
     addTestCase,
     updateTestCase,
     deleteTestCase,
@@ -85,6 +88,8 @@ export const TestCasesView: React.FC = () => {
 
   // Drawer / Side Panel for executions & details
   const [activeTestCaseId, setActiveTestCaseId] = useState<string | null>(null);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [viewTestCase, setViewTestCase] = useState<TestCase | null>(null);
 
   // Execution Form state
   const [execStatus, setExecStatus] = useState<TestExecution['status']>('passed');
@@ -177,6 +182,19 @@ export const TestCasesView: React.FC = () => {
   const activeTestCase = testCases.find(t => t.id === activeTestCaseId);
   const activeTestCaseExecutions = executions.filter(e => e.testCaseId === activeTestCaseId);
 
+  // Pre-fill execution QA assignee
+  useEffect(() => {
+    if (activeTestCaseId && activeTestCase) {
+      if (activeTestCase.assignedQaId) {
+        setExecutedById(activeTestCase.assignedQaId);
+      } else if (qaEngineers.length > 0) {
+        setExecutedById(qaEngineers[0].id);
+      } else {
+        setExecutedById('System Default QA');
+      }
+    }
+  }, [activeTestCaseId, activeTestCase, qaEngineers]);
+
   // Sorting
   const handleSort = (field: 'title' | 'id' | 'priority') => {
     if (sortBy === field) {
@@ -219,6 +237,7 @@ export const TestCasesView: React.FC = () => {
       setActualResult('');
       setRunTimeMs('');
       setExecutionAttachments([]);
+      setActiveTestCaseId(null);
       addNotification("Execution Tracked", `Logged execution for ${activeTestCaseId} successfully.`, 'success');
     } else {
       setExecFormError(res.error || 'Failed to log execution.');
@@ -469,7 +488,7 @@ export const TestCasesView: React.FC = () => {
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
       {/* LEFT / CENTER: Test Cases Table List */}
-      <div className={`space-y-6 ${activeTestCaseId ? 'xl:col-span-2' : 'xl:col-span-3'}`}>
+      <div className="space-y-6 xl:col-span-3">
         {/* Filter Toolbar */}
         <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 p-4 rounded-2xl flex flex-col gap-4 shadow-xs">
           <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
@@ -746,6 +765,15 @@ export const TestCasesView: React.FC = () => {
                           </span>
                         </td>
                         <td className="p-4 text-right flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                          {/* View Case Profile & Executions History */}
+                          <button
+                            onClick={() => { setViewTestCase(c); setIsViewOpen(true); }}
+                            title="View Case Profile & Execs History"
+                            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg transition-colors cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+
                           {/* Run Quick Execution log launcher */}
                           <button
                             onClick={() => { setActiveTestCaseId(c.id); }}
@@ -835,282 +863,336 @@ export const TestCasesView: React.FC = () => {
         )}
       </div>
 
-      {/* RIGHT: Selected Test Case Execution History & Form Panel */}
+      {/* --- TEST CASE EXECUTION MODAL --- */}
       {activeTestCaseId && activeTestCase && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl shadow-md p-6 flex flex-col gap-6 xl:col-span-1 self-start animate-fade-in">
-          {/* Panel Header */}
-          <div className="flex items-start justify-between pb-3 border-b border-slate-100 dark:border-slate-850">
-            <div>
-              <span className="font-mono text-[10px] font-bold text-indigo-600 dark:text-indigo-400">
-                {activeTestCase.id}
-              </span>
-              <h3 className="text-sm font-bold text-slate-850 dark:text-white font-sans mt-0.5 leading-snug">
-                {activeTestCase.title}
-              </h3>
-            </div>
-            <button
-              onClick={() => setActiveTestCaseId(null)}
-              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 rounded-lg shrink-0 cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Test Case Details Collapsible Card */}
-          <div className="space-y-3.5 bg-slate-50/50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-850 p-4 rounded-xl text-xs text-slate-650 dark:text-slate-350 leading-relaxed font-sans">
-            <div>
-              <span className="font-bold text-slate-500 uppercase tracking-wide text-[9px]">Preconditions:</span>
-              <p className="mt-1 bg-white dark:bg-slate-950 border border-slate-150 dark:border-slate-850 p-2 rounded-lg font-mono text-[10px] whitespace-pre-wrap">
-                {activeTestCase.preconditions || "None declared."}
-              </p>
-            </div>
-
-            <div>
-              <span className="font-bold text-slate-500 uppercase tracking-wide text-[9px]">Steps to Reproduce:</span>
-              <ol className="mt-1.5 space-y-1 list-decimal pl-4">
-                {activeTestCase.steps.map((step, idx) => (
-                  <li key={idx} className="pl-1 text-slate-700 dark:text-slate-300 font-medium">{step}</li>
-                ))}
-              </ol>
-            </div>
-
-            <div>
-              <span className="font-bold text-slate-500 uppercase tracking-wide text-[9px]">Expected Result:</span>
-              <p className="mt-1 font-medium text-slate-800 dark:text-slate-200">
-                {activeTestCase.expectedResult}
-              </p>
-            </div>
-          </div>
-
-          {/* Log New Execution Form */}
-          <div className="border-t border-slate-100 dark:border-slate-850 pt-4">
-            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-              <Play className="w-3.5 h-3.5 text-indigo-500" />
-              <span>Log Execution Run</span>
-            </h4>
-
-            {qaEngineers.length === 0 ? (
-              <div className="p-3 bg-amber-50/50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 text-xs rounded-xl border border-amber-100 dark:border-amber-900/20">
-                You must add at least one QA Engineer under People Management to log executions.
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6">
+          <div onClick={() => setActiveTestCaseId(null)} className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs" />
+          
+          <div className="relative w-full max-w-4xl bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col max-h-[90vh] md:max-h-[92vh] animate-fade-in font-sans">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-50 dark:bg-indigo-950/30 rounded-lg text-indigo-600 dark:text-indigo-400">
+                  <Play className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <span className="font-mono text-[10px] font-extrabold text-indigo-600 dark:text-indigo-400 tracking-wider uppercase bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded-md">
+                    {activeTestCase.id}
+                  </span>
+                  <h3 className="text-base font-bold text-slate-850 dark:text-white mt-1 leading-snug">
+                    Execute: {activeTestCase.title}
+                  </h3>
+                </div>
               </div>
-            ) : (
-              <form onSubmit={handleLogExecution} className="space-y-3.5">
-                {execFormError && (
-                  <div className="p-2.5 bg-red-50 text-red-600 border border-red-100 text-[11px] font-semibold rounded-lg">
-                    {execFormError}
-                  </div>
-                )}
+              <button
+                onClick={() => setActiveTestCaseId(null)}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg shrink-0 cursor-pointer transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Result Status</label>
-                    <select
-                      value={execStatus}
-                      onChange={(e) => setExecStatus(e.target.value as TestExecution['status'])}
-                      className="w-full px-2 py-1.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-250 text-xs font-semibold rounded-lg"
-                    >
-                      <option value="passed">Passed</option>
-                      <option value="failed">Failed</option>
-                      <option value="blocked">Blocked</option>
-                      <option value="retest">Retest</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">QA Engineer</label>
-                    <select
-                      value={executedById}
-                      onChange={(e) => setExecutedById(e.target.value)}
-                      className="w-full px-2 py-1.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-250 text-xs font-semibold rounded-lg"
-                      required
-                    >
-                      <option value="">-- Choose QA --</option>
-                      {qaEngineers.map(q => (
-                        <option key={q.id} value={q.id}>{q.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Actual Result / Log</label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Returns expected API payload with 200 OK"
-                    value={actualResult}
-                    onChange={(e) => setActualResult(e.target.value)}
-                    maxLength={100}
-                    className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-xs rounded-lg"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Duration (ms)</label>
-                    <input
-                      type="number"
-                      placeholder="e.g., 240"
-                      value={runTimeMs}
-                      onChange={(e) => setRunTimeMs(e.target.value)}
-                      min={0}
-                      className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-xs rounded-lg"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Execution Notes</label>
-                    <input
-                      type="text"
-                      placeholder="Optional remarks..."
-                      value={execNotes}
-                      onChange={(e) => setExecNotes(e.target.value)}
-                      maxLength={100}
-                      className="w-full px-2.5 py-1.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-xs rounded-lg"
-                    />
-                  </div>
-                </div>
-
-                {/* File Upload zone supporting drag-and-drop & click */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                    Upload Execution Evidence / Log Files
-                  </label>
-                  <div
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                    onDrop={handleDrop}
-                    className={`border border-dashed rounded-xl p-3 text-center transition-all cursor-pointer ${
-                      isDragging
-                        ? 'border-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/20'
-                        : 'border-slate-200 dark:border-slate-800 hover:border-indigo-500 dark:hover:border-indigo-500/50 bg-slate-50/30 dark:bg-slate-950/10'
-                    }`}
-                    onClick={() => document.getElementById('exec-file-upload')?.click()}
-                  >
-                    <input
-                      id="exec-file-upload"
-                      type="file"
-                      multiple
-                      className="hidden"
-                      onChange={handleFileUpload}
-                    />
-                    <UploadCloud className="w-5 h-5 text-slate-400 mx-auto mb-1" />
-                    <p className="text-[11px] font-medium text-slate-700 dark:text-slate-300">
-                      Drag & drop files here, or <span className="text-indigo-600 dark:text-indigo-400 font-bold underline">browse</span>
-                    </p>
-                    <p className="text-[9px] text-slate-400 mt-0.5">
-                      Upload test execution screenshots, console logs, or payloads
-                    </p>
-                  </div>
-
-                  {/* Render uploaded list */}
-                  {executionAttachments.length > 0 && (
-                    <div className="space-y-1.5 pt-1.5">
-                      <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                        Files Staged ({executionAttachments.length})
+            {/* Modal Body (Scrollable & split in two columns) */}
+            <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                {/* LEFT COLUMN: Specifications & Preconditions (45% Width) */}
+                <div className="lg:col-span-5 space-y-6">
+                  <div>
+                    <h4 className="text-[11px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2.5">
+                      Test Specifications
+                    </h4>
+                    <div className="space-y-4">
+                      {/* Preconditions */}
+                      <div className="bg-slate-50 dark:bg-slate-950/35 border border-slate-150 dark:border-slate-850/80 p-4 rounded-xl">
+                        <span className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide text-[9px] block mb-1">
+                          Preconditions:
+                        </span>
+                        <p className="font-mono text-[10px] text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap bg-white dark:bg-slate-950/60 p-2 border border-slate-100 dark:border-slate-850 rounded-lg">
+                          {activeTestCase.preconditions || "No preconditions declared."}
+                        </p>
                       </div>
-                      <div className="grid grid-cols-1 gap-1.5 max-h-24 overflow-y-auto">
-                        {executionAttachments.map((att, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center justify-between p-1.5 bg-slate-100/50 dark:bg-slate-950/40 border border-slate-150 dark:border-slate-800/80 rounded-lg text-xs"
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <Paperclip className="w-3 h-3 text-slate-400 shrink-0" />
-                              <span className="truncate text-[11px] font-medium text-slate-800 dark:text-slate-200">
-                                {att.name}
+
+                      {/* Steps to Reproduce */}
+                      <div className="bg-slate-50 dark:bg-slate-950/35 border border-slate-150 dark:border-slate-850/80 p-4 rounded-xl">
+                        <span className="font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide text-[9px] block mb-2">
+                          Steps to Reproduce:
+                        </span>
+                        <ol className="space-y-2 list-none pl-0">
+                          {activeTestCase.steps.map((step, idx) => (
+                            <li key={idx} className="flex items-start gap-2.5 text-xs text-slate-700 dark:text-slate-300 font-medium">
+                              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-slate-200/60 dark:bg-slate-800 text-[10px] font-bold text-slate-600 dark:text-slate-400 shrink-0 mt-0.5">
+                                {idx + 1}
                               </span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeAttachment(att.name);
-                              }}
-                              className="p-1 text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors shrink-0"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                        ))}
+                              <span className="pt-0.5 leading-relaxed">{step}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+
+                      {/* Expected Result */}
+                      <div className="bg-emerald-50/20 dark:bg-emerald-950/10 border-l-4 border-emerald-500 p-4 rounded-r-xl rounded-l-md">
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide text-[9px] block mb-1">
+                          Expected Result:
+                        </span>
+                        <p className="text-xs font-semibold text-slate-850 dark:text-slate-200 leading-relaxed">
+                          {activeTestCase.expectedResult}
+                        </p>
                       </div>
                     </div>
-                  )}
+                  </div>
+
+                  {/* Historical Execution History logs */}
+                  <div className="border-t border-slate-100 dark:border-slate-800 pt-5">
+                    <h4 className="text-[11px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                      <History className="w-3.5 h-3.5 text-indigo-500" />
+                      <span>Historical Logs ({activeTestCaseExecutions.length})</span>
+                    </h4>
+
+                    {activeTestCaseExecutions.length === 0 ? (
+                      <div className="text-center py-6 text-slate-400 dark:text-slate-500 text-xs bg-slate-50/50 dark:bg-slate-950/10 border border-slate-100 dark:border-slate-850 rounded-xl">
+                        No previous runs recorded.
+                      </div>
+                    ) : (
+                      <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1.5 custom-scrollbar">
+                        {activeTestCaseExecutions.map(exec => {
+                          const qa = qaEngineers.find(q => q.id === exec.executedById);
+                          return (
+                            <div
+                              key={exec.id}
+                              className="border border-slate-100 dark:border-slate-850 p-3 rounded-xl text-xs space-y-2 bg-slate-50/50 dark:bg-slate-950/20 shadow-xs"
+                            >
+                              <div className="flex items-center justify-between">
+                                {getExecBadge(exec.status)}
+                                <span className="text-[9px] text-slate-400 dark:text-slate-500 font-mono">
+                                  {new Date(exec.executionDate).toLocaleDateString()} {new Date(exec.executionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <p className="font-semibold text-slate-800 dark:text-slate-200 mt-1 leading-snug">
+                                {exec.actualResult}
+                              </p>
+                              {exec.notes && (
+                                <p className="text-slate-500 dark:text-slate-400 italic">
+                                  Notes: {exec.notes}
+                                </p>
+                              )}
+                              {exec.attachments && exec.attachments.length > 0 && (
+                                <div className="pt-1 space-y-1">
+                                  <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Evidence Files:</span>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {exec.attachments.map((att, aIdx) => (
+                                      <a
+                                        key={aIdx}
+                                        href={att.data}
+                                        download={att.name}
+                                        className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-150 dark:border-slate-800 rounded text-[9px] font-medium transition-colors"
+                                        title={`Click to download ${att.name}`}
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <Paperclip className="w-2.5 h-2.5 shrink-0 text-slate-400" />
+                                        <span className="truncate max-w-[120px]">{att.name}</span>
+                                      </a>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              <div className="flex justify-between items-center text-[10px] text-slate-400 dark:text-slate-500 pt-1.5 border-t border-slate-100/50 dark:border-slate-800/40 mt-1">
+                                <span>Runner: {qa?.name || exec.executedById}</span>
+                                {exec.runTimeMs !== null && <span>Took {exec.runTimeMs}ms</span>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <button
-                  type="submit"
-                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg shadow-sm cursor-pointer"
-                >
-                  Post Execution Result
-                </button>
-              </form>
-            )}
-          </div>
+                {/* RIGHT COLUMN: Execution Form (55% Width) */}
+                <div className="lg:col-span-7 space-y-5 lg:border-l lg:border-slate-100 lg:dark:border-slate-800 lg:pl-8">
+                  <div>
+                    <h4 className="text-[11px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">
+                      Log New Execution Run
+                    </h4>
 
-          {/* Historical execution run logs */}
-          <div className="border-t border-slate-100 dark:border-slate-850 pt-4 flex-1">
-            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-              <History className="w-3.5 h-3.5 text-indigo-500" />
-              <span>Execution Timeline Logs</span>
-            </h4>
-
-            {activeTestCaseExecutions.length === 0 ? (
-              <div className="text-center py-6 text-slate-400 dark:text-slate-500 text-xs">
-                No runs recorded for this case yet.
-              </div>
-            ) : (
-              <div className="space-y-3 max-h-52 overflow-y-auto pr-1">
-                {activeTestCaseExecutions.map(exec => {
-                  const qa = qaEngineers.find(q => q.id === exec.executedById);
-                  return (
-                    <div
-                      key={exec.id}
-                      className="border border-slate-100 dark:border-slate-800 p-3 rounded-xl text-xs space-y-1 bg-slate-50/50 dark:bg-slate-950/20"
-                    >
-                      <div className="flex items-center justify-between">
-                        {getExecBadge(exec.status)}
-                        <span className="text-[9px] text-slate-400 dark:text-slate-500 font-mono">
-                          {new Date(exec.executionDate).toLocaleDateString()} {new Date(exec.executionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                    {qaEngineers.length === 0 && (
+                      <div className="p-3 bg-indigo-50/40 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400 text-xs rounded-xl border border-indigo-100 dark:border-indigo-900/20 mb-4 leading-relaxed">
+                        No custom QA Engineers configured. Execution will run under <strong>System Default QA</strong>.
                       </div>
-                      <p className="font-semibold text-slate-800 dark:text-slate-200 mt-1.5 leading-snug">
-                        {exec.actualResult}
-                      </p>
-                      {exec.notes && (
-                        <p className="text-slate-500 dark:text-slate-400 italic">
-                          Notes: {exec.notes}
-                        </p>
-                      )}
-                      {exec.attachments && exec.attachments.length > 0 && (
-                        <div className="pt-1 space-y-1">
-                          <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Evidence Files:</span>
-                          <div className="flex flex-wrap gap-1.5">
-                            {exec.attachments.map((att, aIdx) => (
-                              <a
-                                key={aIdx}
-                                href={att.data}
-                                download={att.name}
-                                className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-150 dark:border-slate-800 rounded text-[9px] font-medium transition-colors"
-                                title={`Click to download ${att.name}`}
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Paperclip className="w-2.5 h-2.5 shrink-0 text-slate-400" />
-                                <span className="truncate max-w-[120px]">{att.name}</span>
-                              </a>
-                            ))}
-                          </div>
+                    )}
+
+                    <form onSubmit={handleLogExecution} className="space-y-4">
+                      {execFormError && (
+                        <div className="p-3 bg-red-50 text-red-600 border border-red-100 text-[11px] font-semibold rounded-lg shadow-xs">
+                          {execFormError}
                         </div>
                       )}
-                      <div className="flex justify-between items-center text-[10px] text-slate-400 dark:text-slate-500 pt-1.5 border-t border-slate-100/50 dark:border-slate-800/40 mt-1">
-                        <span>Runner: {qa?.name || exec.executedById}</span>
-                        {exec.runTimeMs !== null && <span>Took {exec.runTimeMs}ms</span>}
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Result Status</label>
+                          <select
+                            value={execStatus}
+                            onChange={(e) => setExecStatus(e.target.value as TestExecution['status'])}
+                            className="w-full px-3 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-250 text-xs font-semibold rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-hidden transition-all cursor-pointer shadow-xs"
+                          >
+                            <option value="passed">Passed</option>
+                            <option value="failed">Failed</option>
+                            <option value="blocked">Blocked</option>
+                            <option value="retest">Retest</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">QA Engineer</label>
+                          <select
+                            value={executedById}
+                            onChange={(e) => setExecutedById(e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-250 text-xs font-semibold rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-hidden transition-all cursor-pointer shadow-xs"
+                            required
+                          >
+                            {qaEngineers.length === 0 ? (
+                              <option value="System Default QA">System Default QA</option>
+                            ) : (
+                              <>
+                                <option value="">-- Choose QA --</option>
+                                {qaEngineers.map(q => (
+                                  <option key={q.id} value={q.id}>{q.name}</option>
+                                ))}
+                              </>
+                            )}
+                          </select>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Actual Result / Log</label>
+                        <input
+                          type="text"
+                          placeholder="e.g., Returns expected API payload with 200 OK"
+                          value={actualResult}
+                          onChange={(e) => setActualResult(e.target.value)}
+                          maxLength={100}
+                          className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-xs rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-hidden transition-all shadow-xs"
+                          required
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Duration (ms)</label>
+                          <input
+                            type="number"
+                            placeholder="e.g., 240"
+                            value={runTimeMs}
+                            onChange={(e) => setRunTimeMs(e.target.value)}
+                            min={0}
+                            className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-xs rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-hidden transition-all shadow-xs"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Execution Notes</label>
+                          <input
+                            type="text"
+                            placeholder="Optional remarks..."
+                            value={execNotes}
+                            onChange={(e) => setExecNotes(e.target.value)}
+                            maxLength={100}
+                            className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-xs rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-hidden transition-all shadow-xs"
+                          />
+                        </div>
+                      </div>
+
+                      {/* File Upload zone supporting drag-and-drop & click */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
+                          Upload Execution Evidence / Log Files
+                        </label>
+                        <div
+                          onDragOver={handleDragOver}
+                          onDragLeave={handleDragLeave}
+                          onDrop={handleDrop}
+                          className={`border border-dashed rounded-xl p-4 text-center transition-all cursor-pointer ${
+                            isDragging
+                              ? 'border-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/20'
+                              : 'border-slate-200 dark:border-slate-800 hover:border-indigo-500 dark:hover:border-indigo-500/50 bg-slate-50/30 dark:bg-slate-950/10'
+                          }`}
+                          onClick={() => document.getElementById('exec-file-upload')?.click()}
+                        >
+                          <input
+                            id="exec-file-upload"
+                            type="file"
+                            multiple
+                            className="hidden"
+                            onChange={handleFileUpload}
+                          />
+                          <UploadCloud className="w-6 h-6 text-slate-400 mx-auto mb-1.5" />
+                          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            Drag & drop files here, or <span className="text-indigo-600 dark:text-indigo-400 font-bold underline">browse</span>
+                          </p>
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
+                            Upload test execution screenshots, console logs, or payloads
+                          </p>
+                        </div>
+
+                        {/* Render uploaded list */}
+                        {executionAttachments.length > 0 && (
+                          <div className="space-y-1.5 pt-1.5">
+                            <div className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                              Files Staged ({executionAttachments.length})
+                            </div>
+                            <div className="grid grid-cols-1 gap-1.5 max-h-24 overflow-y-auto">
+                              {executionAttachments.map((att, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex items-center justify-between p-2 bg-slate-100/50 dark:bg-slate-950/40 border border-slate-150 dark:border-slate-850/80 rounded-lg text-xs"
+                                >
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <Paperclip className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                    <span className="truncate text-[11px] font-medium text-slate-800 dark:text-slate-200">
+                                      {att.name}
+                                    </span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      removeAttachment(att.name);
+                                    }}
+                                    className="p-1 text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors shrink-0 cursor-pointer"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100 dark:border-slate-800">
+                        <button
+                          type="button"
+                          onClick={() => setActiveTestCaseId(null)}
+                          className="px-4 py-2 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-xs rounded-lg hover:bg-slate-50 dark:hover:bg-slate-950 transition-colors cursor-pointer"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg shadow-xs transition-colors cursor-pointer"
+                        >
+                          Post Execution Result
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
               </div>
-            )}
+            </div>
+
           </div>
         </div>
       )}
@@ -1521,6 +1603,256 @@ export const TestCasesView: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW TEST CASE DETAILS & EXECUTIONS HISTORICAL TIMELINE MODAL */}
+      {isViewOpen && viewTestCase && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div onClick={() => { setIsViewOpen(false); setViewTestCase(null); }} className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs" />
+          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-10 flex flex-col max-h-[85vh]">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-850 bg-slate-50/50 dark:bg-slate-950/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl text-indigo-600 dark:text-indigo-400">
+                  <FileSpreadsheet className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/30 px-2 py-0.5 rounded">
+                    {viewTestCase.id}
+                  </span>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white mt-1 leading-snug">
+                    Test Case & Execution Profile
+                  </h3>
+                </div>
+              </div>
+              <button 
+                onClick={() => { setIsViewOpen(false); setViewTestCase(null); }} 
+                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-6">
+              {/* Test Case Title */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Test Case Title</h4>
+                <p className="text-base font-bold text-slate-850 dark:text-slate-100">
+                  {viewTestCase.title}
+                </p>
+              </div>
+
+              {/* Grid of specifications */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50/50 dark:bg-slate-950/20 p-4 rounded-xl border border-slate-100 dark:border-slate-850 text-xs font-sans">
+                <div>
+                  <span className="block font-bold text-slate-450 uppercase tracking-wider">Project Scope</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 truncate block mt-0.5">
+                    {projects.find(p => p.id === viewTestCase.projectId)?.name || viewTestCase.projectId}
+                  </span>
+                </div>
+                <div>
+                  <span className="block font-bold text-slate-450 uppercase tracking-wider">Module Scope</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 truncate block mt-0.5">
+                    {modules.find(m => m.id === viewTestCase.moduleId)?.name || viewTestCase.moduleId}
+                  </span>
+                </div>
+                <div>
+                  <span className="block font-bold text-slate-450 uppercase tracking-wider">Priority Level</span>
+                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase mt-1 ${
+                    viewTestCase.priority === 'critical' ? 'bg-red-50 dark:bg-red-950/30 text-red-750 dark:text-red-400' :
+                    viewTestCase.priority === 'high' ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-700 dark:text-orange-400' :
+                    'bg-slate-100 dark:bg-slate-800 text-slate-650'
+                  }`}>
+                    {viewTestCase.priority}
+                  </span>
+                </div>
+                <div>
+                  <span className="block font-bold text-slate-450 uppercase tracking-wider">Assigned QA</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200 truncate block mt-0.5">
+                    {qaEngineers.find(q => q.id === viewTestCase.assignedQaId)?.name || <em className="text-slate-300">Unassigned</em>}
+                  </span>
+                </div>
+              </div>
+
+              {/* Specs Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Preconditions</span>
+                  <div className="bg-slate-50/20 dark:bg-slate-950/10 border border-slate-150 dark:border-slate-800 p-3 rounded-xl font-mono text-[11px] text-slate-655 dark:text-slate-350 min-h-[60px] whitespace-pre-wrap leading-normal">
+                    {viewTestCase.preconditions || "No system preconditions declared."}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Expected Outcome</span>
+                  <div className="bg-slate-50/20 dark:bg-slate-950/10 border border-slate-150 dark:border-slate-800 p-3 rounded-xl text-xs font-medium text-slate-800 dark:text-slate-200 min-h-[60px] leading-relaxed">
+                    {viewTestCase.expectedResult}
+                  </div>
+                </div>
+              </div>
+
+              {/* Steps */}
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Step-by-Step Instructions</span>
+                <ol className="space-y-1.5 list-decimal pl-5">
+                  {viewTestCase.steps.map((step, idx) => (
+                    <li key={idx} className="text-xs text-slate-700 dark:text-slate-300 font-medium pl-1">
+                      {step}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              {/* Associated Traceable Requirements */}
+              {viewTestCase.moduleId && (
+                <div>
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+                    <span>Traced Product Requirements</span>
+                  </h4>
+                  {requirements.filter(r => r.moduleId === viewTestCase.moduleId).length === 0 ? (
+                    <p className="text-xs text-slate-450 italic p-3 bg-slate-50/50 dark:bg-slate-950/20 rounded-xl border border-slate-100 dark:border-slate-850">
+                      No matching requirements map to this module scope.
+                    </p>
+                  ) : (
+                    <div className="border border-slate-150 dark:border-slate-800/80 rounded-xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-850 max-h-32 overflow-y-auto">
+                      {requirements.filter(r => r.moduleId === viewTestCase.moduleId).map(req => (
+                        <div key={req.id} className="p-2.5 bg-white dark:bg-slate-900 flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2 min-w-0 pr-2">
+                            <span className="font-mono text-[10px] font-bold text-indigo-500 shrink-0">{req.id}</span>
+                            <span className="font-semibold text-slate-700 dark:text-slate-300 truncate">{req.title}</span>
+                          </div>
+                          <span className="text-[9px] font-bold uppercase text-slate-455 shrink-0">{req.status}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Linked Bug Tracker Tickets */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+                  <span>Logged Bugs / Defects for Case</span>
+                  <span className="px-2 py-0.5 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-450 rounded-full text-[10px] font-bold font-mono">
+                    {bugs.filter(b => b.testCaseId === viewTestCase.id).length} Defects
+                  </span>
+                </h4>
+                {bugs.filter(b => b.testCaseId === viewTestCase.id).length === 0 ? (
+                  <p className="text-xs text-slate-450 italic p-3 bg-slate-50/50 dark:bg-slate-950/20 rounded-xl border border-slate-100 dark:border-slate-850">
+                    Excellent quality record! No bugs are registered specifically for this test case.
+                  </p>
+                ) : (
+                  <div className="border border-slate-150 dark:border-slate-800/80 rounded-xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-850 max-h-32 overflow-y-auto">
+                    {bugs.filter(b => b.testCaseId === viewTestCase.id).map(defect => {
+                      const dev = developers.find(d => d.id === defect.assignedDevId);
+                      return (
+                        <div key={defect.id} className="p-2.5 bg-white dark:bg-slate-900 flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2 min-w-0 pr-2">
+                            <span className="font-mono text-[10px] font-bold text-red-600 dark:text-red-400 shrink-0">{defect.id}</span>
+                            <span className="font-semibold text-slate-700 dark:text-slate-300 truncate">{defect.title}</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[9px] text-slate-400">Dev: {dev ? dev.name : "Unassigned"}</span>
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
+                              defect.status === 'closed' || defect.status === 'rejected' ? 'bg-slate-100 text-slate-500' : 'bg-red-50 dark:bg-red-950/30 text-red-700'
+                            }`}>
+                              {defect.status}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Historical Execution Run Logs Timeline */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2.5 flex items-center justify-between">
+                  <span>Execution Run logs & timeline</span>
+                  <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-450 rounded-full text-[10px] font-bold font-mono">
+                    {executions.filter(e => e.testCaseId === viewTestCase.id).length} runs
+                  </span>
+                </h4>
+                {executions.filter(e => e.testCaseId === viewTestCase.id).length === 0 ? (
+                  <p className="text-xs text-slate-450 italic p-3 bg-slate-50/50 dark:bg-slate-950/20 rounded-xl border border-slate-100 dark:border-slate-850">
+                    No run logs have been recorded for this case yet.
+                  </p>
+                ) : (
+                  <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
+                    {executions.filter(e => e.testCaseId === viewTestCase.id).map(exec => {
+                      const qa = qaEngineers.find(q => q.id === exec.executedById);
+                      return (
+                        <div
+                          key={exec.id}
+                          className="border border-slate-100 dark:border-slate-800 p-3 rounded-xl text-xs space-y-1.5 bg-slate-50/50 dark:bg-slate-950/20"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
+                              exec.status === 'passed' ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400' :
+                              exec.status === 'failed' ? 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400' :
+                              exec.status === 'blocked' ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-700' :
+                              'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700'
+                            }`}>
+                              {exec.status}
+                            </span>
+                            <span className="text-[9px] text-slate-400 dark:text-slate-500 font-mono">
+                              {new Date(exec.executionDate).toLocaleDateString()} {new Date(exec.executionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <p className="font-semibold text-slate-800 dark:text-slate-200 leading-snug">
+                            {exec.actualResult}
+                          </p>
+                          {exec.notes && (
+                            <p className="text-slate-500 dark:text-slate-400 italic text-[11px]">
+                              Notes: {exec.notes}
+                            </p>
+                          )}
+                          {exec.attachments && exec.attachments.length > 0 && (
+                            <div className="pt-1">
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Attached Evidence:</span>
+                              <div className="flex flex-wrap gap-1.5">
+                                {exec.attachments.map((att, aIdx) => (
+                                  <a
+                                    key={aIdx}
+                                    href={att.data}
+                                    download={att.name}
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-150 dark:border-slate-800 rounded text-[9px] font-medium transition-colors"
+                                    title={`Download ${att.name}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <Paperclip className="w-2.5 h-2.5 shrink-0 text-slate-400" />
+                                    <span className="truncate max-w-[120px]">{att.name}</span>
+                                  </a>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          <div className="flex justify-between items-center text-[10px] text-slate-400 dark:text-slate-500 pt-1.5 border-t border-slate-100/40 dark:border-slate-800/40 mt-1">
+                            <span>Runner: {qa?.name || exec.executedById}</span>
+                            {exec.runTimeMs !== null && <span>Duration: {exec.runTimeMs}ms</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-100 dark:border-slate-850 bg-slate-50/50 dark:bg-slate-950/20 flex justify-end gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => { setIsViewOpen(false); setViewTestCase(null); }}
+                className="px-4 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-350 text-xs font-semibold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                Close View
+              </button>
+            </div>
           </div>
         </div>
       )}
