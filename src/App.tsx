@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { SidebarLayout } from './components/SidebarLayout';
 import { DashboardView } from './components/DashboardView';
@@ -20,8 +20,14 @@ import { SettingsView } from './components/SettingsView';
 import { ProfileView } from './components/ProfileView';
 
 function AppContent() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('activeTab') || 'dashboard';
+  });
   const { loading } = useApp();
+
+  useEffect(() => {
+    localStorage.setItem('activeTab', activeTab);
+  }, [activeTab]);
 
   const renderActiveView = () => {
     switch (activeTab) {
