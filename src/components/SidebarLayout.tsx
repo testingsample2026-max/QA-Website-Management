@@ -652,7 +652,11 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
 
         {/* User Info Footer */}
         <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
-          <div className="flex items-center gap-3">
+          <div
+            onClick={() => setActiveTab('profile')}
+            className="flex items-center gap-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850 p-2 -m-2 rounded-xl transition-colors"
+            title="View Profile"
+          >
             <div className="w-8.5 h-8.5 rounded-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 font-semibold text-xs shadow-inner uppercase shrink-0">
               {settings.userName.substring(0, 2)}
             </div>
@@ -724,7 +728,14 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
         </nav>
 
         <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
-          <div className="flex items-center gap-3">
+          <div
+            onClick={() => {
+              setActiveTab('profile');
+              setIsMobileMenuOpen(false);
+            }}
+            className="flex items-center gap-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-850 p-2 -m-2 rounded-xl transition-colors"
+            title="View Profile"
+          >
             <div className="w-8.5 h-8.5 rounded-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-300 font-semibold text-xs shadow-inner uppercase shrink-0">
               {settings.userName.substring(0, 2)}
             </div>
@@ -975,7 +986,11 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
 
             {/* Quick Profile Badge */}
             <div className="hidden sm:flex items-center gap-2 border-l border-slate-200 dark:border-slate-800 pl-4">
-              <div className="w-8.5 h-8.5 rounded-full bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400 font-bold text-xs flex items-center justify-center shadow-xs border border-indigo-100 dark:border-indigo-900/40 uppercase">
+              <div
+                onClick={() => setActiveTab('profile')}
+                className="w-8.5 h-8.5 rounded-full bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400 font-bold text-xs flex items-center justify-center shadow-xs border border-indigo-100 dark:border-indigo-900/40 uppercase cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-950/40 transition-all hover:scale-105 active:scale-95"
+                title="View Profile"
+              >
                 {settings.userName.substring(0, 2)}
               </div>
             </div>
