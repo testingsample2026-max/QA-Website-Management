@@ -42,7 +42,7 @@ export const ReleasesView: React.FC = () => {
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const [itemsPerPage, setItemsPerPage] = useState(5);
 
   // Forms state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -368,10 +368,28 @@ export const ReleasesView: React.FC = () => {
           </div>
 
           {/* Pagination */}
-          <div className="p-4 bg-slate-50/50 dark:bg-slate-950/30 border-t border-slate-150 dark:border-slate-850 flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400">
-            <span>
-              Showing {Math.min(filteredReleases.length, (currentPage - 1) * itemsPerPage + 1)} to {Math.min(filteredReleases.length, currentPage * itemsPerPage)} of {filteredReleases.length} releases
-            </span>
+          <div className="p-4 bg-slate-50/50 dark:bg-slate-950/30 border-t border-slate-150 dark:border-slate-850 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-medium text-slate-500 dark:text-slate-400">
+            <div className="flex flex-wrap items-center gap-4">
+              <span>
+                Showing {filteredReleases.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} to {Math.min(filteredReleases.length, currentPage * itemsPerPage)} of {filteredReleases.length} releases
+              </span>
+              <div className="flex items-center gap-1.5 border-l border-slate-200 dark:border-slate-800 pl-4">
+                <span className="text-slate-400">Show:</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="px-2 py-1 bg-white dark:bg-slate-900 border border-slate-250 dark:border-slate-800 rounded-lg text-slate-700 dark:text-slate-350 cursor-pointer outline-hidden focus:ring-1 focus:ring-indigo-500"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
             <div className="flex items-center gap-1.5">
               <button
                 disabled={currentPage === 1}
