@@ -21,8 +21,14 @@ import {
   FileText,
   Bookmark,
   Layers,
-  Eye
+  Eye,
+  Bold,
+  Italic,
+  Type,
+  Image as ImageIcon,
+  Maximize2
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 export const RequirementsView: React.FC = () => {
   const {
@@ -72,6 +78,71 @@ export const RequirementsView: React.FC = () => {
   const [priority, setPriority] = useState<Requirement['priority']>('medium');
   const [status, setStatus] = useState<Requirement['status']>('draft');
   const [formError, setFormError] = useState('');
+
+  // Zoomed Image Lightbox State
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+
+  const handleInsertMarkdown = (syntax: 'bold' | 'italic' | 'heading', elementId: string) => {
+    const textarea = document.getElementById(elementId) as HTMLTextAreaElement | null;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selectedText = text.substring(start, end);
+
+    let replacement = '';
+    if (syntax === 'bold') {
+      replacement = `**${selectedText || 'bold text'}**`;
+    } else if (syntax === 'italic') {
+      replacement = `*${selectedText || 'italic text'}*`;
+    } else if (syntax === 'heading') {
+      replacement = `\n### ${selectedText || 'Heading'}\n`;
+    }
+
+    const newValue = text.substring(0, start) + replacement + text.substring(end);
+    setDescription(newValue);
+
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = start + replacement.length;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 50);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, elementId: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      addNotification('Invalid File', 'Only image files are supported.', 'error');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const textarea = document.getElementById(elementId) as HTMLTextAreaElement | null;
+      if (!textarea) return;
+
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const text = textarea.value;
+
+      const replacement = `\n![${file.name}](${dataUrl})\n`;
+      const newValue = text.substring(0, start) + replacement + text.substring(end);
+      setDescription(newValue);
+
+      addNotification('Success', `Image "${file.name}" uploaded to Description.`, 'success');
+
+      setTimeout(() => {
+        textarea.focus();
+        const newCursorPos = start + replacement.length;
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+      }, 50);
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Bulk Edit state
   const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
@@ -604,7 +675,7 @@ export const RequirementsView: React.FC = () => {
       {isCreateOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div onClick={() => setIsCreateOpen(false)} className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs" />
-          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden z-10 p-6">
+          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden z-10 p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Bookmark className="w-5 h-5 text-indigo-500" />
@@ -694,13 +765,57 @@ export const RequirementsView: React.FC = () => {
                 <label className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wide">
                   Description / User Story
                 </label>
+                
+                {/* Markdown / Rich Text Toolbar */}
+                <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-xl gap-2">
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleInsertMarkdown('bold', 'create-desc')}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Bold (**text**)"
+                    >
+                      <Bold className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInsertMarkdown('italic', 'create-desc')}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Italic (*text*)"
+                    >
+                      <Italic className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInsertMarkdown('heading', 'create-desc')}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Header (### text)"
+                    >
+                      <Type className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <label className="flex items-center gap-1.5 px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 text-[11px] font-bold rounded-lg cursor-pointer transition-all">
+                      <ImageIcon className="w-3.5 h-3.5" />
+                      <span>Upload Image</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleImageUpload(e, 'create-desc')}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+
                 <textarea
+                  id="create-desc"
                   placeholder="As a user, I want my password to be hashed using bcrypt..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  maxLength={250}
-                  rows={3}
-                  className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden"
+                  rows={8}
+                  className="w-full px-3.5 py-2 border-x border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-sm rounded-b-xl focus:outline-hidden"
                 />
               </div>
 
@@ -728,7 +843,7 @@ export const RequirementsView: React.FC = () => {
       {isEditOpen && selectedRequirement && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div onClick={() => { setIsEditOpen(false); setSelectedRequirement(null); }} className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs" />
-          <div className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden z-10 p-6">
+          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden z-10 p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Edit className="w-5 h-5 text-indigo-500" />
@@ -833,13 +948,57 @@ export const RequirementsView: React.FC = () => {
                 <label className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wide">
                   Description / User Story
                 </label>
+                
+                {/* Markdown / Rich Text Toolbar */}
+                <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-xl gap-2">
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleInsertMarkdown('bold', 'edit-desc')}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Bold (**text**)"
+                    >
+                      <Bold className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInsertMarkdown('italic', 'edit-desc')}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Italic (*text*)"
+                    >
+                      <Italic className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInsertMarkdown('heading', 'edit-desc')}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Header (### text)"
+                    >
+                      <Type className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <label className="flex items-center gap-1.5 px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 text-[11px] font-bold rounded-lg cursor-pointer transition-all">
+                      <ImageIcon className="w-3.5 h-3.5" />
+                      <span>Upload Image</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleImageUpload(e, 'edit-desc')}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+
                 <textarea
+                  id="edit-desc"
                   placeholder="As a user, I want my password to be hashed using bcrypt..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  maxLength={250}
-                  rows={3}
-                  className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden"
+                  rows={8}
+                  className="w-full px-3.5 py-2 border-x border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-sm rounded-b-xl focus:outline-hidden"
                 />
               </div>
 
@@ -1001,8 +1160,39 @@ export const RequirementsView: React.FC = () => {
               {/* Requirement Description */}
               <div>
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Description Statement</h4>
-                <div className="bg-slate-50/20 dark:bg-slate-950/10 border border-slate-150 dark:border-slate-800 p-4 rounded-xl text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-                  {viewRequirement.description || <em className="text-slate-400">No descriptive specification logged for this requirement.</em>}
+                <div className="bg-slate-50/20 dark:bg-slate-950/10 border border-slate-150 dark:border-slate-800 p-4 rounded-xl text-sm text-slate-700 dark:text-slate-350 leading-relaxed">
+                  {viewRequirement.description ? (
+                    <div className="markdown-body">
+                      <ReactMarkdown
+                        components={{
+                          img: ({ node, ...props }) => (
+                            <div className="my-3 flex flex-col items-center">
+                              <img
+                                {...props}
+                                alt={props.alt || "Uploaded Attachment"}
+                                className="max-h-80 max-w-full object-contain rounded-xl border border-slate-200 dark:border-slate-800 cursor-zoom-in hover:scale-[1.01] transition-transform duration-200 shadow-md"
+                                onClick={() => setZoomedImage(props.src || null)}
+                              />
+                              {props.alt && (
+                                <span className="text-[10px] text-slate-450 dark:text-slate-550 font-mono mt-1.5">
+                                  {props.alt} (Click to zoom)
+                                </span>
+                              )}
+                            </div>
+                          ),
+                          p: ({ node, children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                          h3: ({ node, children }) => <h3 className="text-base font-bold text-slate-900 dark:text-white mt-3 mb-1">{children}</h3>,
+                          h4: ({ node, children }) => <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 mt-2 mb-1">{children}</h4>,
+                          ul: ({ node, children }) => <ul className="list-disc pl-5 mb-2">{children}</ul>,
+                          ol: ({ node, children }) => <ol className="list-decimal pl-5 mb-2">{children}</ol>,
+                        }}
+                      >
+                        {viewRequirement.description}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <em className="text-slate-400">No descriptive specification logged for this requirement.</em>
+                  )}
                 </div>
               </div>
 
@@ -1105,6 +1295,35 @@ export const RequirementsView: React.FC = () => {
         title="Bulk Delete Requirements?"
         message={`Are you sure you want to delete ${selectedIds.length} selected requirements?`}
       />
+
+      {/* ZOOMED IMAGE LIGHTBOX MODAL */}
+      {zoomedImage && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md transition-opacity duration-300">
+          <button 
+            onClick={() => setZoomedImage(null)}
+            className="absolute top-4 right-4 p-3 bg-slate-900/80 hover:bg-slate-800/80 text-white rounded-full transition-all hover:scale-105 active:scale-95 z-[101] shadow-lg cursor-pointer animate-pulse"
+            title="Close Fullscreen View"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          
+          <div 
+            onClick={() => setZoomedImage(null)} 
+            className="absolute inset-0"
+          />
+          
+          <div className="relative max-w-5xl max-h-[90vh] flex flex-col items-center justify-center z-10 p-2">
+            <img 
+              src={zoomedImage} 
+              alt="Bigger Attachment View"
+              className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-slate-800 bg-slate-900/50"
+            />
+            <span className="text-slate-300 font-medium text-sm mt-3 bg-slate-900/60 px-4 py-1.5 rounded-full backdrop-blur-xs font-mono">
+              Bigger Image View
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
