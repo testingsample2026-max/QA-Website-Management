@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { Requirement } from '../types';
 import { EmptyState } from './EmptyState';
@@ -89,6 +89,14 @@ export const RequirementsView: React.FC = () => {
 
   // Zoomed Image Lightbox State
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+
+  // Tab states for Description field
+  const [createTab, setCreateTab] = useState<'write' | 'preview'>('write');
+  const [editTab, setEditTab] = useState<'write' | 'preview'>('write');
+
+  // Input refs for image uploading
+  const createFileInputRef = useRef<HTMLInputElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleInsertMarkdown = (
     syntax: 'bold' | 'italic' | 'underline' | 'strikethrough' | 'heading' | 'link' | 'bulletList' | 'numberedList' | 'blockquote' | 'code' | 'horizontalRule', 
@@ -265,10 +273,16 @@ export const RequirementsView: React.FC = () => {
 
   const getCleanDescription = (desc: string) => {
     if (!desc) return '';
-    // Replace markdown image references with a simpler [Attachment] text
-    let text = desc.replace(/!\[.*?\]\(.*?\)/g, '[Attachment Image]');
-    // Replace headers, bold, italics syntax
-    text = text.replace(/[#*`_~]/g, '');
+    let text = desc;
+    // Strip HTML if it's formatted as HTML (CKEditor output)
+    if (/<[a-z][\s\S]*>/i.test(text)) {
+      text = text.replace(/<[^>]*>/g, ' ');
+    } else {
+      // Replace markdown image references with a simpler [Attachment] text
+      text = text.replace(/!\[.*?\]\(.*?\)/g, '[Attachment Image]');
+      // Replace headers, bold, italics syntax
+      text = text.replace(/[#*`_~]/g, '');
+    }
     return text.trim();
   };
 
@@ -377,6 +391,7 @@ export const RequirementsView: React.FC = () => {
     setPriority(req.priority);
     setStatus(req.status);
     setFormError('');
+    setEditTab('write');
     setIsEditOpen(true);
   };
 
@@ -544,6 +559,7 @@ export const RequirementsView: React.FC = () => {
               const firstMod = modules.find(m => m.projectId === projects[0]?.id);
               setModuleId(firstMod?.id || '');
               setPriority('medium');
+              setCreateTab('write');
               setIsCreateOpen(true);
             }}
             className="inline-flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-sm cursor-pointer"
@@ -608,6 +624,7 @@ export const RequirementsView: React.FC = () => {
                   const firstMod = modules.find(m => m.projectId === projects[0]?.id);
                   setModuleId(firstMod?.id || '');
                   setPriority('medium');
+                  setCreateTab('write');
                   setIsCreateOpen(true);
                 }
           }
@@ -890,151 +907,232 @@ export const RequirementsView: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wide">
-                  Description / User Story
-                </label>
-                
-                {/* Markdown / Rich Text Toolbar */}
-                <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-xl gap-2 overflow-x-auto">
-                  <div className="flex items-center gap-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wide">
+                    Description / User Story
+                  </label>
+                  {/* Tabs */}
+                  <div className="flex bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-lg text-xs">
                     <button
                       type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('bold', 'create-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Bold (**text**)"
+                      onClick={() => setCreateTab('write')}
+                      className={`px-2.5 py-1 rounded-md font-semibold transition-colors cursor-pointer ${
+                        createTab === 'write'
+                          ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      }`}
                     >
-                      <Bold className="w-4 h-4" />
+                      Write
                     </button>
                     <button
                       type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('italic', 'create-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Italic (*text*)"
+                      onClick={() => setCreateTab('preview')}
+                      className={`px-2.5 py-1 rounded-md font-semibold transition-colors cursor-pointer ${
+                        createTab === 'preview'
+                          ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      }`}
                     >
-                      <Italic className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('underline', 'create-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Underline (<u>text</u>)"
-                    >
-                      <Underline className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('strikethrough', 'create-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Strikethrough (~~text~~)"
-                    >
-                      <Strikethrough className="w-4 h-4" />
-                    </button>
-                    
-                    <div className="w-[1px] h-4 bg-slate-250 dark:bg-slate-800 mx-1" />
-
-                    <button
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('heading', 'create-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Header (### text)"
-                    >
-                      <Type className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('link', 'create-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Link ([text](url))"
-                    >
-                      <Link className="w-4 h-4" />
-                    </button>
-
-                    <div className="w-[1px] h-4 bg-slate-250 dark:bg-slate-800 mx-1" />
-
-                    <button
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('bulletList', 'create-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Bulleted List (- item)"
-                    >
-                      <List className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('numberedList', 'create-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Numbered List (1. item)"
-                    >
-                      <ListOrdered className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('blockquote', 'create-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Blockquote (> quote)"
-                    >
-                      <Quote className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('code', 'create-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Code Block (```)"
-                    >
-                      <Code className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('horizontalRule', 'create-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Horizontal Line (---)"
-                    >
-                      <Minus className="w-4 h-4" />
+                      Preview
                     </button>
                   </div>
                 </div>
+                
+                <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-950">
+                  {createTab === 'write' ? (
+                    <>
+                      {/* Markdown Toolbar */}
+                      <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 gap-2 overflow-x-auto">
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('bold', 'create-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-350 cursor-pointer"
+                            title="Bold (**text**)"
+                          >
+                            <Bold className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('italic', 'create-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title="Italic (*text*)"
+                          >
+                            <Italic className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('underline', 'create-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title="Underline (<u>text</u>)"
+                          >
+                            <Underline className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('strikethrough', 'create-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title="Strikethrough (~~text~~)"
+                          >
+                            <Strikethrough className="w-4 h-4" />
+                          </button>
+                          
+                          <div className="w-[1px] h-4 bg-slate-250 dark:bg-slate-800 mx-1" />
 
-                <textarea
-                  id="create-desc"
-                  placeholder="As a user, I want my password to be hashed using bcrypt..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={8}
-                  className="w-full px-3.5 py-2 border-x border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-sm rounded-b-xl focus:outline-hidden"
-                />
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('heading', 'create-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title="Header (### text)"
+                          >
+                            <Type className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('link', 'create-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title="Link ([text](url))"
+                          >
+                            <Link className="w-4 h-4" />
+                          </button>
+
+                          <div className="w-[1px] h-4 bg-slate-250 dark:bg-slate-800 mx-1" />
+
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('bulletList', 'create-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title="Bulleted List (- item)"
+                          >
+                            <List className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('numberedList', 'create-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title="Numbered List (1. item)"
+                          >
+                            <ListOrdered className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('blockquote', 'create-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title="Blockquote (> quote)"
+                          >
+                            <Quote className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('code', 'create-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title="Code Block (```)"
+                          >
+                            <Code className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('horizontalRule', 'create-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title="Horizontal Line (---)"
+                          >
+                            <Minus className="w-4 h-4" />
+                          </button>
+
+                          <div className="w-[1px] h-4 bg-slate-250 dark:bg-slate-800 mx-1" />
+
+                          {/* Image Upload Button */}
+                          <button
+                            type="button"
+                            onClick={() => createFileInputRef.current?.click()}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title="Upload Image/Attachment"
+                          >
+                            <ImageIcon className="w-4 h-4" />
+                          </button>
+                          <input
+                            type="file"
+                            ref={createFileInputRef}
+                            onChange={(e) => handleImageUpload(e, 'create-desc')}
+                            accept="image/*"
+                            className="hidden"
+                          />
+                        </div>
+                      </div>
+
+                      <textarea
+                        id="create-desc"
+                        placeholder="As a user, I want my password to be hashed using bcrypt..."
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        rows={8}
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-sm focus:outline-hidden border-none"
+                      />
+                    </>
+                  ) : (
+                    <div className="p-4 bg-slate-50/50 dark:bg-slate-950/20 min-h-[224px] overflow-y-auto max-h-72 text-sm text-slate-700 dark:text-slate-350 leading-relaxed markdown-body">
+                      {description.trim() ? (
+                        <ReactMarkdown
+                          components={{
+                            img: ({ node, ...props }) => (
+                              <div className="my-3 flex flex-col items-center">
+                                <img
+                                  {...props}
+                                  alt={props.alt || "Uploaded Attachment"}
+                                  className="max-h-80 max-w-full object-contain rounded-xl border border-slate-200 dark:border-slate-800"
+                                />
+                              </div>
+                            ),
+                            p: ({ node, children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                            h3: ({ node, children }) => <h3 className="text-base font-bold text-slate-900 dark:text-white mt-3 mb-1">{children}</h3>,
+                            h4: ({ node, children }) => <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 mt-2 mb-1">{children}</h4>,
+                            ul: ({ node, children }) => <ul className="list-disc pl-5 mb-2">{children}</ul>,
+                            ol: ({ node, children }) => <ol className="list-decimal pl-5 mb-2">{children}</ol>,
+                            strong: ({ children }) => <strong className="font-extrabold text-slate-900 dark:text-white">{children}</strong>,
+                            em: ({ children }) => <em className="italic font-medium text-slate-800 dark:text-slate-200">{children}</em>,
+                          }}
+                        >
+                          {description}
+                        </ReactMarkdown>
+                      ) : (
+                        <em className="text-slate-400">Nothing to preview. Type some Markdown or upload an image!</em>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-3">
@@ -1163,151 +1261,232 @@ export const RequirementsView: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wide">
-                  Description / User Story
-                </label>
-                
-                {/* Markdown / Rich Text Toolbar */}
-                <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-xl gap-2 overflow-x-auto">
-                  <div className="flex items-center gap-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wide">
+                    Description / User Story
+                  </label>
+                  {/* Tabs */}
+                  <div className="flex bg-slate-100 dark:bg-slate-800/80 p-0.5 rounded-lg text-xs">
                     <button
                       type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('bold', 'edit-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Bold (**text**)"
+                      onClick={() => setEditTab('write')}
+                      className={`px-2.5 py-1 rounded-md font-semibold transition-colors cursor-pointer ${
+                        editTab === 'write'
+                          ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      }`}
                     >
-                      <Bold className="w-4 h-4" />
+                      Write
                     </button>
                     <button
                       type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('italic', 'edit-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Italic (*text*)"
+                      onClick={() => setEditTab('preview')}
+                      className={`px-2.5 py-1 rounded-md font-semibold transition-colors cursor-pointer ${
+                        editTab === 'preview'
+                          ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                      }`}
                     >
-                      <Italic className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('underline', 'edit-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Underline (<u>text</u>)"
-                    >
-                      <Underline className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('strikethrough', 'edit-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Strikethrough (~~text~~)"
-                    >
-                      <Strikethrough className="w-4 h-4" />
-                    </button>
-                    
-                    <div className="w-[1px] h-4 bg-slate-250 dark:bg-slate-800 mx-1" />
-
-                    <button
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('heading', 'edit-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Header (### text)"
-                    >
-                      <Type className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('link', 'edit-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Link ([text](url))"
-                    >
-                      <Link className="w-4 h-4" />
-                    </button>
-
-                    <div className="w-[1px] h-4 bg-slate-250 dark:bg-slate-800 mx-1" />
-
-                    <button
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('bulletList', 'edit-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Bulleted List (- item)"
-                    >
-                      <List className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('numberedList', 'edit-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Numbered List (1. item)"
-                    >
-                      <ListOrdered className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('blockquote', 'edit-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Blockquote (> quote)"
-                    >
-                      <Quote className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('code', 'edit-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Code Block (```)"
-                    >
-                      <Code className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleInsertMarkdown('horizontalRule', 'edit-desc');
-                      }}
-                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
-                      title="Horizontal Line (---)"
-                    >
-                      <Minus className="w-4 h-4" />
+                      Preview
                     </button>
                   </div>
                 </div>
+                
+                <div className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-950">
+                  {editTab === 'write' ? (
+                    <>
+                      {/* Markdown Toolbar */}
+                      <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 gap-2 overflow-x-auto">
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('bold', 'edit-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-350 cursor-pointer"
+                            title="Bold (**text**)"
+                          >
+                            <Bold className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('italic', 'edit-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-350 cursor-pointer"
+                            title="Italic (*text*)"
+                          >
+                            <Italic className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('underline', 'edit-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title="Underline (<u>text</u>)"
+                          >
+                            <Underline className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('strikethrough', 'edit-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title="Strikethrough (~~text~~)"
+                          >
+                            <Strikethrough className="w-4 h-4" />
+                          </button>
+                          
+                          <div className="w-[1px] h-4 bg-slate-250 dark:bg-slate-800 mx-1" />
 
-                <textarea
-                  id="edit-desc"
-                  placeholder="As a user, I want my password to be hashed using bcrypt..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={8}
-                  className="w-full px-3.5 py-2 border-x border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-sm rounded-b-xl focus:outline-hidden"
-                />
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('heading', 'edit-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title="Header (### text)"
+                          >
+                            <Type className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('link', 'edit-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title="Link ([text](url))"
+                          >
+                            <Link className="w-4 h-4" />
+                          </button>
+
+                          <div className="w-[1px] h-4 bg-slate-250 dark:bg-slate-800 mx-1" />
+
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('bulletList', 'edit-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title="Bulleted List (- item)"
+                          >
+                            <List className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('numberedList', 'edit-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title="Numbered List (1. item)"
+                          >
+                            <ListOrdered className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('blockquote', 'edit-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title="Blockquote (> quote)"
+                          >
+                            <Quote className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('code', 'edit-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title="Code Block (```)"
+                          >
+                            <Code className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleInsertMarkdown('horizontalRule', 'edit-desc');
+                            }}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title="Horizontal Line (---)"
+                          >
+                            <Minus className="w-4 h-4" />
+                          </button>
+
+                          <div className="w-[1px] h-4 bg-slate-250 dark:bg-slate-800 mx-1" />
+
+                          {/* Image Upload Button */}
+                          <button
+                            type="button"
+                            onClick={() => editFileInputRef.current?.click()}
+                            className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                            title="Upload Image/Attachment"
+                          >
+                            <ImageIcon className="w-4 h-4" />
+                          </button>
+                          <input
+                            type="file"
+                            ref={editFileInputRef}
+                            onChange={(e) => handleImageUpload(e, 'edit-desc')}
+                            accept="image/*"
+                            className="hidden"
+                          />
+                        </div>
+                      </div>
+
+                      <textarea
+                        id="edit-desc"
+                        placeholder="As a user, I want my password to be hashed using bcrypt..."
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        rows={8}
+                        className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-sm focus:outline-hidden border-none"
+                      />
+                    </>
+                  ) : (
+                    <div className="p-4 bg-slate-50/50 dark:bg-slate-950/20 min-h-[224px] overflow-y-auto max-h-72 text-sm text-slate-700 dark:text-slate-350 leading-relaxed markdown-body">
+                      {description.trim() ? (
+                        <ReactMarkdown
+                          components={{
+                            img: ({ node, ...props }) => (
+                              <div className="my-3 flex flex-col items-center">
+                                <img
+                                  {...props}
+                                  alt={props.alt || "Uploaded Attachment"}
+                                  className="max-h-80 max-w-full object-contain rounded-xl border border-slate-200 dark:border-slate-800"
+                                />
+                              </div>
+                            ),
+                            p: ({ node, children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                            h3: ({ node, children }) => <h3 className="text-base font-bold text-slate-900 dark:text-white mt-3 mb-1">{children}</h3>,
+                            h4: ({ node, children }) => <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 mt-2 mb-1">{children}</h4>,
+                            ul: ({ node, children }) => <ul className="list-disc pl-5 mb-2">{children}</ul>,
+                            ol: ({ node, children }) => <ol className="list-decimal pl-5 mb-2">{children}</ol>,
+                            strong: ({ children }) => <strong className="font-extrabold text-slate-900 dark:text-white">{children}</strong>,
+                            em: ({ children }) => <em className="italic font-medium text-slate-800 dark:text-slate-200">{children}</em>,
+                          }}
+                        >
+                          {description}
+                        </ReactMarkdown>
+                      ) : (
+                        <em className="text-slate-400">Nothing to preview. Type some Markdown or upload an image!</em>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-3">
@@ -1465,40 +1644,47 @@ export const RequirementsView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Requirement Description */}
+               {/* Requirement Description */}
               <div>
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Description Statement</h4>
                 <div className="bg-slate-50/20 dark:bg-slate-950/10 border border-slate-150 dark:border-slate-800 p-4 rounded-xl text-sm text-slate-700 dark:text-slate-350 leading-relaxed">
                   {viewRequirement.description ? (
                     <div className="markdown-body">
-                      <ReactMarkdown
-                        components={{
-                          img: ({ node, ...props }) => (
-                            <div className="my-3 flex flex-col items-center">
-                              <img
-                                {...props}
-                                alt={props.alt || "Uploaded Attachment"}
-                                className="max-h-80 max-w-full object-contain rounded-xl border border-slate-200 dark:border-slate-800 cursor-zoom-in hover:scale-[1.01] transition-transform duration-200 shadow-md"
-                                onClick={() => setZoomedImage(props.src || null)}
-                              />
-                              {props.alt && (
-                                <span className="text-[10px] text-slate-450 dark:text-slate-550 font-mono mt-1.5">
-                                  {props.alt} (Click to zoom)
-                                </span>
-                              )}
-                            </div>
-                          ),
-                          p: ({ node, children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                          h3: ({ node, children }) => <h3 className="text-base font-bold text-slate-900 dark:text-white mt-3 mb-1">{children}</h3>,
-                          h4: ({ node, children }) => <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 mt-2 mb-1">{children}</h4>,
-                          ul: ({ node, children }) => <ul className="list-disc pl-5 mb-2">{children}</ul>,
-                          ol: ({ node, children }) => <ol className="list-decimal pl-5 mb-2">{children}</ol>,
-                          strong: ({ children }) => <strong className="font-extrabold text-slate-900 dark:text-white">{children}</strong>,
-                          em: ({ children }) => <em className="italic font-medium text-slate-800 dark:text-slate-200">{children}</em>,
-                        }}
-                      >
-                        {viewRequirement.description}
-                      </ReactMarkdown>
+                      {/<[a-z][\s\S]*>/i.test(viewRequirement.description) ? (
+                        <div 
+                          className="prose dark:prose-invert max-w-none text-sm text-slate-700 dark:text-slate-350 leading-relaxed"
+                          dangerouslySetInnerHTML={{ __html: viewRequirement.description }}
+                        />
+                      ) : (
+                        <ReactMarkdown
+                          components={{
+                            img: ({ node, ...props }) => (
+                              <div className="my-3 flex flex-col items-center">
+                                <img
+                                  {...props}
+                                  alt={props.alt || "Uploaded Attachment"}
+                                  className="max-h-80 max-w-full object-contain rounded-xl border border-slate-200 dark:border-slate-800 cursor-zoom-in hover:scale-[1.01] transition-transform duration-200 shadow-md"
+                                  onClick={() => setZoomedImage(props.src || null)}
+                                />
+                                {props.alt && (
+                                  <span className="text-[10px] text-slate-450 dark:text-slate-550 font-mono mt-1.5">
+                                    {props.alt} (Click to zoom)
+                                  </span>
+                                )}
+                              </div>
+                            ),
+                            p: ({ node, children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                            h3: ({ node, children }) => <h3 className="text-base font-bold text-slate-900 dark:text-white mt-3 mb-1">{children}</h3>,
+                            h4: ({ node, children }) => <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 mt-2 mb-1">{children}</h4>,
+                            ul: ({ node, children }) => <ul className="list-disc pl-5 mb-2">{children}</ul>,
+                            ol: ({ node, children }) => <ol className="list-decimal pl-5 mb-2">{children}</ol>,
+                            strong: ({ children }) => <strong className="font-extrabold text-slate-900 dark:text-white">{children}</strong>,
+                            em: ({ children }) => <em className="italic font-medium text-slate-800 dark:text-slate-200">{children}</em>,
+                          }}
+                        >
+                          {viewRequirement.description}
+                        </ReactMarkdown>
+                      )}
                     </div>
                   ) : (
                     <em className="text-slate-400">No descriptive specification logged for this requirement.</em>
