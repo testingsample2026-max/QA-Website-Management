@@ -101,24 +101,93 @@ export const TestCasesView: React.FC = () => {
   const [executionAttachments, setExecutionAttachments] = useState<{ name: string; type: string; data: string }[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 
+  const addAttachment = (name: string, type: string, data: string) => {
+    setExecutionAttachments(prev => {
+      if (prev.some(p => p.name === name)) return prev;
+      return [
+        ...prev,
+        { name, type, data }
+      ];
+    });
+  };
+
+  const readTestCaseFileFallback = (file: File) => {
+    if (file.size > 1.5 * 1024 * 1024) {
+      addNotification('File Too Large', `File "${file.name}" is too large (> 1.5MB) to upload without exceeding database size limits.`, 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64Data = reader.result as string;
+      addAttachment(file.name, file.type, base64Data);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const processFiles = (files: File[]) => {
     files.forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64Data = reader.result as string;
-        setExecutionAttachments(prev => {
-          if (prev.some(p => p.name === file.name)) return prev;
-          return [
-            ...prev,
-            {
-              name: file.name,
-              type: file.type,
-              data: base64Data
+      if (file.type.startsWith('image/')) {
+        let objectUrl: string | null = null;
+        try {
+          objectUrl = URL.createObjectURL(file);
+        } catch (e) {
+          readTestCaseFileFallback(file);
+          return;
+        }
+
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+
+            const MAX_WIDTH = 800;
+            const MAX_HEIGHT = 600;
+
+            if (width > height) {
+              if (width > MAX_WIDTH) {
+                height = Math.round(height * (MAX_WIDTH / width));
+                width = MAX_WIDTH;
+              }
+            } else {
+              if (height > MAX_HEIGHT) {
+                width = Math.round(width * (MAX_HEIGHT / height));
+                height = MAX_HEIGHT;
+              }
             }
-          ];
-        });
-      };
-      reader.readAsDataURL(file);
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.fillStyle = '#FFFFFF';
+              ctx.fillRect(0, 0, width, height);
+              ctx.drawImage(img, 0, 0, width, height);
+              const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+              if (objectUrl) URL.revokeObjectURL(objectUrl);
+              addAttachment(file.name, 'image/jpeg', dataUrl);
+            } else {
+              if (objectUrl) URL.revokeObjectURL(objectUrl);
+              readTestCaseFileFallback(file);
+            }
+          } catch (err) {
+            console.error("Test Case image compression error:", err);
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+            readTestCaseFileFallback(file);
+          }
+        };
+
+        img.onerror = () => {
+          if (objectUrl) URL.revokeObjectURL(objectUrl);
+          readTestCaseFileFallback(file);
+        };
+
+        img.src = objectUrl;
+      } else {
+        readTestCaseFileFallback(file);
+      }
     });
   };
 

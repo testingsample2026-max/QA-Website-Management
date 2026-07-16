@@ -24,9 +24,17 @@ import {
   Eye,
   Bold,
   Italic,
+  Underline,
+  Strikethrough,
+  Code,
+  List,
+  ListOrdered,
+  Quote,
+  Minus,
   Type,
   Image as ImageIcon,
-  Maximize2
+  Maximize2,
+  Link
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
@@ -82,7 +90,10 @@ export const RequirementsView: React.FC = () => {
   // Zoomed Image Lightbox State
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
-  const handleInsertMarkdown = (syntax: 'bold' | 'italic' | 'heading', elementId: string) => {
+  const handleInsertMarkdown = (
+    syntax: 'bold' | 'italic' | 'underline' | 'strikethrough' | 'heading' | 'link' | 'bulletList' | 'numberedList' | 'blockquote' | 'code' | 'horizontalRule', 
+    elementId: string
+  ) => {
     const textarea = document.getElementById(elementId) as HTMLTextAreaElement | null;
     if (!textarea) return;
 
@@ -97,8 +108,24 @@ export const RequirementsView: React.FC = () => {
       replacement = `**${selectedText || 'bold text'}**`;
     } else if (syntax === 'italic') {
       replacement = `*${selectedText || 'italic text'}*`;
+    } else if (syntax === 'underline') {
+      replacement = `<u>${selectedText || 'underlined text'}</u>`;
+    } else if (syntax === 'strikethrough') {
+      replacement = `~~${selectedText || 'strikethrough text'}~~`;
     } else if (syntax === 'heading') {
       replacement = `\n### ${selectedText || 'Heading'}\n`;
+    } else if (syntax === 'link') {
+      replacement = `[${selectedText || 'link text'}](url)`;
+    } else if (syntax === 'bulletList') {
+      replacement = `\n- ${selectedText || 'List item'}\n`;
+    } else if (syntax === 'numberedList') {
+      replacement = `\n1. ${selectedText || 'List item'}\n`;
+    } else if (syntax === 'blockquote') {
+      replacement = `\n> ${selectedText || 'Blockquote'}\n`;
+    } else if (syntax === 'code') {
+      replacement = `\n\`\`\`\n${selectedText || 'code block'}\n\`\`\`\n`;
+    } else if (syntax === 'horizontalRule') {
+      replacement = `\n---\n`;
     }
 
     const newValue = text.substring(0, start) + replacement + text.substring(end);
@@ -117,6 +144,84 @@ export const RequirementsView: React.FC = () => {
     }, 50);
   };
 
+  const readFallbackOrWarn = (file: File, callback: (dataUrl: string) => void) => {
+    if (file.size > 1.5 * 1024 * 1024) {
+      addNotification('Image Too Large', 'The image is too large and could not be compressed. Please upload an image under 1.5MB.', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      callback(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const compressImage = (file: File, callback: (dataUrl: string) => void) => {
+    let objectUrl: string | null = null;
+    try {
+      objectUrl = URL.createObjectURL(file);
+    } catch (e) {
+      readFallbackOrWarn(file, callback);
+      return;
+    }
+
+    const img = new Image();
+    
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Max dimensions to keep image lightweight but highly legible
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 600;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height = Math.round(height * (MAX_WIDTH / width));
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width = Math.round(width * (MAX_HEIGHT / height));
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          // Fill white background for transparent PNG compatibility in JPEG format
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Highly efficient JPEG encoding at 0.5 quality
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+          if (objectUrl) URL.revokeObjectURL(objectUrl);
+          callback(dataUrl);
+        } else {
+          if (objectUrl) URL.revokeObjectURL(objectUrl);
+          readFallbackOrWarn(file, callback);
+        }
+      } catch (err) {
+        console.error("Compression error:", err);
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+        readFallbackOrWarn(file, callback);
+      }
+    };
+
+    img.onerror = () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      readFallbackOrWarn(file, callback);
+    };
+
+    img.src = objectUrl;
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, elementId: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -129,9 +234,7 @@ export const RequirementsView: React.FC = () => {
     // Reset the value so the same image can be uploaded again if selected
     e.target.value = '';
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
+    compressImage(file, (dataUrl) => {
       const textarea = document.getElementById(elementId) as HTMLTextAreaElement | null;
       if (!textarea) return;
 
@@ -157,8 +260,7 @@ export const RequirementsView: React.FC = () => {
         textarea.focus();
         textarea.setSelectionRange(newCursorPos, newCursorPos);
       }, 50);
-    };
-    reader.readAsDataURL(file);
+    });
   };
 
   const getCleanDescription = (desc: string) => {
@@ -793,7 +895,7 @@ export const RequirementsView: React.FC = () => {
                 </label>
                 
                 {/* Markdown / Rich Text Toolbar */}
-                <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-xl gap-2">
+                <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-xl gap-2 overflow-x-auto">
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
@@ -821,6 +923,31 @@ export const RequirementsView: React.FC = () => {
                       type="button"
                       onMouseDown={(e) => {
                         e.preventDefault();
+                        handleInsertMarkdown('underline', 'create-desc');
+                      }}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Underline (<u>text</u>)"
+                    >
+                      <Underline className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleInsertMarkdown('strikethrough', 'create-desc');
+                      }}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Strikethrough (~~text~~)"
+                    >
+                      <Strikethrough className="w-4 h-4" />
+                    </button>
+                    
+                    <div className="w-[1px] h-4 bg-slate-250 dark:bg-slate-800 mx-1" />
+
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
                         handleInsertMarkdown('heading', 'create-desc');
                       }}
                       className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
@@ -828,19 +955,75 @@ export const RequirementsView: React.FC = () => {
                     >
                       <Type className="w-4 h-4" />
                     </button>
-                  </div>
-                  
-                  <div className="flex items-center">
-                    <label className="flex items-center gap-1.5 px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 text-[11px] font-bold rounded-lg cursor-pointer transition-all">
-                      <ImageIcon className="w-3.5 h-3.5" />
-                      <span>Upload Image</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleImageUpload(e, 'create-desc')}
-                        className="hidden"
-                      />
-                    </label>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleInsertMarkdown('link', 'create-desc');
+                      }}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Link ([text](url))"
+                    >
+                      <Link className="w-4 h-4" />
+                    </button>
+
+                    <div className="w-[1px] h-4 bg-slate-250 dark:bg-slate-800 mx-1" />
+
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleInsertMarkdown('bulletList', 'create-desc');
+                      }}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Bulleted List (- item)"
+                    >
+                      <List className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleInsertMarkdown('numberedList', 'create-desc');
+                      }}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Numbered List (1. item)"
+                    >
+                      <ListOrdered className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleInsertMarkdown('blockquote', 'create-desc');
+                      }}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Blockquote (> quote)"
+                    >
+                      <Quote className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleInsertMarkdown('code', 'create-desc');
+                      }}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Code Block (```)"
+                    >
+                      <Code className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleInsertMarkdown('horizontalRule', 'create-desc');
+                      }}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Horizontal Line (---)"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
 
@@ -985,7 +1168,7 @@ export const RequirementsView: React.FC = () => {
                 </label>
                 
                 {/* Markdown / Rich Text Toolbar */}
-                <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-xl gap-2">
+                <div className="flex items-center justify-between px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-t-xl gap-2 overflow-x-auto">
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
@@ -1013,6 +1196,31 @@ export const RequirementsView: React.FC = () => {
                       type="button"
                       onMouseDown={(e) => {
                         e.preventDefault();
+                        handleInsertMarkdown('underline', 'edit-desc');
+                      }}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Underline (<u>text</u>)"
+                    >
+                      <Underline className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleInsertMarkdown('strikethrough', 'edit-desc');
+                      }}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Strikethrough (~~text~~)"
+                    >
+                      <Strikethrough className="w-4 h-4" />
+                    </button>
+                    
+                    <div className="w-[1px] h-4 bg-slate-250 dark:bg-slate-800 mx-1" />
+
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
                         handleInsertMarkdown('heading', 'edit-desc');
                       }}
                       className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
@@ -1020,19 +1228,75 @@ export const RequirementsView: React.FC = () => {
                     >
                       <Type className="w-4 h-4" />
                     </button>
-                  </div>
-                  
-                  <div className="flex items-center">
-                    <label className="flex items-center gap-1.5 px-2 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/40 text-indigo-700 dark:text-indigo-400 text-[11px] font-bold rounded-lg cursor-pointer transition-all">
-                      <ImageIcon className="w-3.5 h-3.5" />
-                      <span>Upload Image</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleImageUpload(e, 'edit-desc')}
-                        className="hidden"
-                      />
-                    </label>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleInsertMarkdown('link', 'edit-desc');
+                      }}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Link ([text](url))"
+                    >
+                      <Link className="w-4 h-4" />
+                    </button>
+
+                    <div className="w-[1px] h-4 bg-slate-250 dark:bg-slate-800 mx-1" />
+
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleInsertMarkdown('bulletList', 'edit-desc');
+                      }}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Bulleted List (- item)"
+                    >
+                      <List className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleInsertMarkdown('numberedList', 'edit-desc');
+                      }}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Numbered List (1. item)"
+                    >
+                      <ListOrdered className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleInsertMarkdown('blockquote', 'edit-desc');
+                      }}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Blockquote (> quote)"
+                    >
+                      <Quote className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleInsertMarkdown('code', 'edit-desc');
+                      }}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Code Block (```)"
+                    >
+                      <Code className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleInsertMarkdown('horizontalRule', 'edit-desc');
+                      }}
+                      className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
+                      title="Horizontal Line (---)"
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
 
