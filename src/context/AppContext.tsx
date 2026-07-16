@@ -1019,8 +1019,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setReleases(prev => prev.filter(r => r.id !== id));
     deleteDocFromFirestore('releases', id).catch(err => console.error(err));
 
-    logActivity('DELETE', 'Release', id, rel.name, `Deleted release "${rel.name}"`);
-    addNotification("Release Deleted", `Release "${rel.name}" was permanently deleted.`, 'warning');
+    logActivity('DELETE', 'Release', id, rel.version, `Deleted release "${rel.version}"`);
+    addNotification("Release Deleted", `Release "${rel.version}" was permanently deleted.`, 'warning');
     return { success: true };
   }, [releases, logActivity, addNotification]);
 

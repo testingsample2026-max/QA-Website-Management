@@ -105,7 +105,8 @@ export const PeopleView: React.FC<{ defaultSection?: 'devs' | 'qas' }> = ({ defa
     const res = addDeveloper({
       name: devName.trim(),
       email: devEmail.trim().toLowerCase(),
-      role: devRole
+      role: devRole,
+      status: 'active'
     });
 
     if (res.success) {
@@ -164,7 +165,8 @@ export const PeopleView: React.FC<{ defaultSection?: 'devs' | 'qas' }> = ({ defa
     const res = addQaEngineer({
       name: qaName.trim(),
       email: qaEmail.trim().toLowerCase(),
-      role: qaRole
+      role: qaRole,
+      status: 'active'
     });
 
     if (res.success) {

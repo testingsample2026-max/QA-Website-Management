@@ -86,6 +86,7 @@ export const RequirementsView: React.FC = () => {
     const textarea = document.getElementById(elementId) as HTMLTextAreaElement | null;
     if (!textarea) return;
 
+    textarea.focus();
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const text = textarea.value;
@@ -101,11 +102,17 @@ export const RequirementsView: React.FC = () => {
     }
 
     const newValue = text.substring(0, start) + replacement + text.substring(end);
+    
+    // Synchronously update the DOM textarea value to prevent React from resetting the cursor
+    textarea.value = newValue;
     setDescription(newValue);
+
+    const newCursorPos = start + replacement.length;
+    textarea.focus();
+    textarea.setSelectionRange(newCursorPos, newCursorPos);
 
     setTimeout(() => {
       textarea.focus();
-      const newCursorPos = start + replacement.length;
       textarea.setSelectionRange(newCursorPos, newCursorPos);
     }, 50);
   };
@@ -119,29 +126,48 @@ export const RequirementsView: React.FC = () => {
       return;
     }
 
+    // Reset the value so the same image can be uploaded again if selected
+    e.target.value = '';
+
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;
       const textarea = document.getElementById(elementId) as HTMLTextAreaElement | null;
       if (!textarea) return;
 
+      textarea.focus();
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
       const text = textarea.value;
 
       const replacement = `\n![${file.name}](${dataUrl})\n`;
       const newValue = text.substring(0, start) + replacement + text.substring(end);
+      
+      // Synchronously update the DOM textarea value to prevent React from resetting the cursor
+      textarea.value = newValue;
       setDescription(newValue);
 
       addNotification('Success', `Image "${file.name}" uploaded to Description.`, 'success');
 
+      const newCursorPos = start + replacement.length;
+      textarea.focus();
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+
       setTimeout(() => {
         textarea.focus();
-        const newCursorPos = start + replacement.length;
         textarea.setSelectionRange(newCursorPos, newCursorPos);
       }, 50);
     };
     reader.readAsDataURL(file);
+  };
+
+  const getCleanDescription = (desc: string) => {
+    if (!desc) return '';
+    // Replace markdown image references with a simpler [Attachment] text
+    let text = desc.replace(/!\[.*?\]\(.*?\)/g, '[Attachment Image]');
+    // Replace headers, bold, italics syntax
+    text = text.replace(/[#*`_~]/g, '');
+    return text.trim();
   };
 
   // Bulk Edit state
@@ -547,7 +573,7 @@ export const RequirementsView: React.FC = () => {
                         <div className="flex flex-col">
                           <span className="font-semibold text-slate-800 dark:text-slate-200 hover:text-indigo-650 dark:hover:text-indigo-400 transition-colors">{r.title}</span>
                           <span className="text-[11px] text-slate-450 dark:text-slate-500 mt-1 truncate max-w-[200px]">
-                            {r.description || <em className="text-slate-300">No description</em>}
+                            {getCleanDescription(r.description) || <em className="text-slate-300">No description</em>}
                           </span>
                         </div>
                       </td>
@@ -771,7 +797,10 @@ export const RequirementsView: React.FC = () => {
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      onClick={() => handleInsertMarkdown('bold', 'create-desc')}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleInsertMarkdown('bold', 'create-desc');
+                      }}
                       className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
                       title="Bold (**text**)"
                     >
@@ -779,7 +808,10 @@ export const RequirementsView: React.FC = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleInsertMarkdown('italic', 'create-desc')}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleInsertMarkdown('italic', 'create-desc');
+                      }}
                       className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
                       title="Italic (*text*)"
                     >
@@ -787,7 +819,10 @@ export const RequirementsView: React.FC = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleInsertMarkdown('heading', 'create-desc')}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleInsertMarkdown('heading', 'create-desc');
+                      }}
                       className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
                       title="Header (### text)"
                     >
@@ -954,7 +989,10 @@ export const RequirementsView: React.FC = () => {
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      onClick={() => handleInsertMarkdown('bold', 'edit-desc')}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleInsertMarkdown('bold', 'edit-desc');
+                      }}
                       className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
                       title="Bold (**text**)"
                     >
@@ -962,7 +1000,10 @@ export const RequirementsView: React.FC = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleInsertMarkdown('italic', 'edit-desc')}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleInsertMarkdown('italic', 'edit-desc');
+                      }}
                       className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
                       title="Italic (*text*)"
                     >
@@ -970,7 +1011,10 @@ export const RequirementsView: React.FC = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleInsertMarkdown('heading', 'edit-desc')}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleInsertMarkdown('heading', 'edit-desc');
+                      }}
                       className="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-850 rounded text-slate-700 dark:text-slate-300 cursor-pointer"
                       title="Header (### text)"
                     >
@@ -1185,6 +1229,8 @@ export const RequirementsView: React.FC = () => {
                           h4: ({ node, children }) => <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 mt-2 mb-1">{children}</h4>,
                           ul: ({ node, children }) => <ul className="list-disc pl-5 mb-2">{children}</ul>,
                           ol: ({ node, children }) => <ol className="list-decimal pl-5 mb-2">{children}</ol>,
+                          strong: ({ children }) => <strong className="font-extrabold text-slate-900 dark:text-white">{children}</strong>,
+                          em: ({ children }) => <em className="italic font-medium text-slate-800 dark:text-slate-200">{children}</em>,
                         }}
                       >
                         {viewRequirement.description}

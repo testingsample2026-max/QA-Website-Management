@@ -226,8 +226,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ setActiveTab }) =>
                 className="transition-all duration-500 hover:stroke-[24]"
                 style={{ cursor: 'pointer' }}
                 onClick={() => setActiveTab('testcases')}
-                title={`View ${seg.label} test cases`}
-              />
+              >
+                <title>{`View ${seg.label} test cases`}</title>
+              </circle>
             );
           })}
           {/* Donut Center */}

@@ -1210,7 +1210,7 @@ export const BugsView: React.FC = () => {
                   <span className="block font-bold text-slate-450 uppercase tracking-wider">Priority</span>
                   <div className="mt-1">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                      viewBug.priority === 'critical' ? 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400' :
+                      viewBug.priority === 'immediate' ? 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400' :
                       viewBug.priority === 'high' ? 'bg-orange-50 dark:bg-orange-950/30 text-orange-700' :
                       viewBug.priority === 'medium' ? 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-750' :
                       'bg-slate-100 text-slate-600'

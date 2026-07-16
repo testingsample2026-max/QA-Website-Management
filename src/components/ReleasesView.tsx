@@ -91,7 +91,8 @@ export const ReleasesView: React.FC = () => {
       version: version.trim(),
       releaseDate,
       status: 'draft',
-      notes: notes.trim()
+      notes: notes.trim(),
+      createdAt: new Date().toISOString()
     });
 
     if (res.success) {
