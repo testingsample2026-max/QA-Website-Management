@@ -52,18 +52,56 @@ export const ReportsView: React.FC = () => {
   } = useApp();
 
   const [isExportOpen, setIsExportOpen] = React.useState(false);
+  const [selectedProjectId, setSelectedProjectId] = React.useState<string>('');
+  const [selectedModuleId, setSelectedModuleId] = React.useState<string>('');
+
+  const filteredModulesList = React.useMemo(() => {
+    return selectedProjectId
+      ? modules.filter(m => m.projectId === selectedProjectId)
+      : modules;
+  }, [selectedProjectId, modules]);
+
+  React.useEffect(() => {
+    if (selectedProjectId && selectedModuleId) {
+      const exists = modules.some(m => m.id === selectedModuleId && m.projectId === selectedProjectId);
+      if (!exists) {
+        setSelectedModuleId('');
+      }
+    }
+  }, [selectedProjectId, selectedModuleId, modules]);
+
+  const filteredTestCases = React.useMemo(() => {
+    let list = testCases;
+    if (selectedProjectId) list = list.filter(tc => tc.projectId === selectedProjectId);
+    if (selectedModuleId) list = list.filter(tc => tc.moduleId === selectedModuleId);
+    return list;
+  }, [testCases, selectedProjectId, selectedModuleId]);
+
+  const filteredExecutions = React.useMemo(() => {
+    let list = executions;
+    if (selectedProjectId) list = list.filter(e => e.projectId === selectedProjectId);
+    if (selectedModuleId) list = list.filter(e => e.moduleId === selectedModuleId);
+    return list;
+  }, [executions, selectedProjectId, selectedModuleId]);
+
+  const filteredBugs = React.useMemo(() => {
+    let list = bugs;
+    if (selectedProjectId) list = list.filter(b => b.projectId === selectedProjectId);
+    if (selectedModuleId) list = list.filter(b => b.moduleId === selectedModuleId);
+    return list;
+  }, [bugs, selectedProjectId, selectedModuleId]);
 
   // Guard against complete empty state to avoid breaking recharts
   const hasData = testCases.length > 0 || executions.length > 0 || bugs.length > 0;
 
   // 1. Calc Pass Rate
-  const totalExecs = executions.length;
-  const passedExecs = executions.filter(e => e.status === 'passed').length;
+  const totalExecs = filteredExecutions.length;
+  const passedExecs = filteredExecutions.filter(e => e.status === 'passed').length;
   const passRate = totalExecs > 0 ? Math.round((passedExecs / totalExecs) * 100) : 0;
 
   // 2. Calc Automation Rate
-  const totalCases = testCases.length;
-  const automatedCases = testCases.filter(c => c.type === 'automated').length;
+  const totalCases = filteredTestCases.length;
+  const automatedCases = filteredTestCases.filter(c => c.type === 'automated').length;
   const automationRate = totalCases > 0 ? Math.round((automatedCases / totalCases) * 100) : 0;
 
   // 3. Automated vs Manual Pie Data
@@ -75,10 +113,10 @@ export const ReportsView: React.FC = () => {
   const TYPE_COLORS = ['#6366f1', '#10b981']; // indigo, emerald
 
   // 4. Execution Outcomes Breakdown Data
-  const passed = executions.filter(e => e.status === 'passed').length;
-  const failed = executions.filter(e => e.status === 'failed').length;
-  const blocked = executions.filter(e => e.status === 'blocked').length;
-  const retest = executions.filter(e => e.status === 'retest').length;
+  const passed = filteredExecutions.filter(e => e.status === 'passed').length;
+  const failed = filteredExecutions.filter(e => e.status === 'failed').length;
+  const blocked = filteredExecutions.filter(e => e.status === 'blocked').length;
+  const retest = filteredExecutions.filter(e => e.status === 'retest').length;
 
   const executionBreakdownData = [
     { name: 'Passed', count: passed, color: '#10b981' },
@@ -88,10 +126,10 @@ export const ReportsView: React.FC = () => {
   ].filter(d => d.count > 0);
 
   // 5. Defect Severity Breakdown Data
-  const critBugs = bugs.filter(b => b.severity === 'critical').length;
-  const highBugs = bugs.filter(b => b.severity === 'high').length;
-  const medBugs = bugs.filter(b => b.severity === 'medium').length;
-  const lowBugs = bugs.filter(b => b.severity === 'low').length;
+  const critBugs = filteredBugs.filter(b => b.severity === 'critical').length;
+  const highBugs = filteredBugs.filter(b => b.severity === 'high').length;
+  const medBugs = filteredBugs.filter(b => b.severity === 'medium').length;
+  const lowBugs = filteredBugs.filter(b => b.severity === 'low').length;
 
   const defectSeverityData = [
     { name: 'Critical', count: critBugs },
@@ -101,7 +139,7 @@ export const ReportsView: React.FC = () => {
   ];
 
   // 6. Test execution trend over time (last 7 logs)
-  const sortedExecTimeline = [...executions]
+  const sortedExecTimeline = [...filteredExecutions]
     .sort((a, b) => new Date(a.executionDate).getTime() - new Date(b.executionDate).getTime())
     .slice(-7);
 
@@ -122,8 +160,8 @@ export const ReportsView: React.FC = () => {
         overallPassRatePercent: passRate,
         executionBreakdown: { passed, failed, blocked, retest },
         defectMetrics: {
-          totalBugs: bugs.length,
-          activeBugs: bugs.filter(b => b.status !== 'closed' && b.status !== 'rejected').length,
+          totalBugs: filteredBugs.length,
+          activeBugs: filteredBugs.filter(b => b.status !== 'closed' && b.status !== 'rejected').length,
           criticalSeverity: critBugs,
           highSeverity: highBugs,
           mediumSeverity: medBugs,
@@ -146,7 +184,7 @@ export const ReportsView: React.FC = () => {
   const exportAsCSV = () => {
     const csvRows = [
       ['Execution ID', 'Test Case ID', 'Project ID', 'Module ID', 'Status', 'Executed By', 'Date', 'Notes', 'Run Time (ms)'],
-      ...executions.map(e => [
+      ...filteredExecutions.map(e => [
         e.id,
         e.testCaseId,
         e.projectId,
@@ -172,7 +210,7 @@ export const ReportsView: React.FC = () => {
   };
 
   const exportAsMarkdown = () => {
-    const activeBugsCount = bugs.filter(b => b.status !== 'closed' && b.status !== 'rejected').length;
+    const activeBugsCount = filteredBugs.filter(b => b.status !== 'closed' && b.status !== 'rejected').length;
     const md = `# Quality Assurance Status & Analytics Report
 Generated on: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}
 
@@ -190,7 +228,7 @@ Total Executions Logged: ${totalExecs}
 - **Retest Required:** ${retest}
 
 ## 3. Defect Severity Density
-Total Logged Defects: ${bugs.length}
+Total Logged Defects: ${filteredBugs.length}
 - **Critical Severity:** ${critBugs}
 - **High Severity:** ${highBugs}
 - **Medium Severity:** ${medBugs}
@@ -217,7 +255,7 @@ Total Logged Defects: ${bugs.length}
 
   const exportAsWordReport = () => {
     try {
-      const activeBugsCount = bugs.filter(b => b.status !== 'closed' && b.status !== 'rejected').length;
+      const activeBugsCount = filteredBugs.filter(b => b.status !== 'closed' && b.status !== 'rejected').length;
       const title = 'Executive Quality Status & Analytics Report';
       
       const sections = [
@@ -249,7 +287,7 @@ Total Logged Defects: ${bugs.length}
         },
         {
           heading: '4. System Context & Inventory',
-          content: `Active Projects Enrolled: ${projects.length}\nActive Modules Registered: ${modules.length}\nTotal Defect Reports logged: ${bugs.length}`
+          content: `Active Projects Enrolled: ${projects.length}\nActive Modules Registered: ${modules.length}\nTotal Defect Reports logged: ${filteredBugs.length}`
         }
       ];
 
@@ -264,7 +302,7 @@ Total Logged Defects: ${bugs.length}
 
   const exportAsPDFReport = () => {
     try {
-      const activeBugsCount = bugs.filter(b => b.status !== 'closed' && b.status !== 'rejected').length;
+      const activeBugsCount = filteredBugs.filter(b => b.status !== 'closed' && b.status !== 'rejected').length;
       const title = 'Executive Quality Status Report';
       
       const sections = [
@@ -296,7 +334,7 @@ Total Logged Defects: ${bugs.length}
         },
         {
           heading: '4. System Context & Inventory',
-          content: `Projects Enrolled: ${projects.length}\nModules Registered: ${modules.length}\nTotal Defects Logged: ${bugs.length}`
+          content: `Projects Enrolled: ${projects.length}\nModules Registered: ${modules.length}\nTotal Defects Logged: ${filteredBugs.length}`
         }
       ];
 
@@ -311,7 +349,7 @@ Total Logged Defects: ${bugs.length}
 
   const exportAsPPTXReport = () => {
     try {
-      const activeBugsCount = bugs.filter(b => b.status !== 'closed' && b.status !== 'rejected').length;
+      const activeBugsCount = filteredBugs.filter(b => b.status !== 'closed' && b.status !== 'rejected').length;
       const title = 'Executive QA Status & Analytics Report';
       const subtitle = `Comprehensive Quality Assurance Audit | Run Rate: ${passRate}%`;
 
@@ -469,8 +507,55 @@ Total Logged Defects: ${bugs.length}
         </div>
       </div>
 
+      {/* Reports Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-4 p-4 bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl shadow-xs">
+        <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+          <label className="text-[10px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">
+            Filter by Project
+          </label>
+          <select
+            value={selectedProjectId}
+            onChange={(e) => setSelectedProjectId(e.target.value)}
+            className="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-700 dark:text-slate-300 focus:ring-1 focus:ring-indigo-500 outline-hidden"
+          >
+            <option value="">All Projects</option>
+            {projects.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+          <label className="text-[10px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-wider">
+            Filter by Module
+          </label>
+          <select
+            value={selectedModuleId}
+            onChange={(e) => setSelectedModuleId(e.target.value)}
+            className="w-full text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-700 dark:text-slate-300 focus:ring-1 focus:ring-indigo-500 outline-hidden"
+          >
+            <option value="">All Modules</option>
+            {filteredModulesList.map(m => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {(selectedProjectId || selectedModuleId) && (
+          <button
+            onClick={() => {
+              setSelectedProjectId('');
+              setSelectedModuleId('');
+            }}
+            className="self-end px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-850 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-semibold rounded-xl transition-all cursor-pointer h-[34px] flex items-center justify-center border border-slate-200 dark:border-slate-800"
+          >
+            Clear Filters
+          </button>
+        )}
+      </div>
+
       {/* Dynamic metric summaries widgets */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         {/* Pass Rate Metric */}
         <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 p-5 rounded-2xl shadow-xs flex items-center justify-between">
           <div className="space-y-1">
@@ -486,29 +571,15 @@ Total Logged Defects: ${bugs.length}
           </div>
         </div>
 
-        {/* Automation Coverage */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 p-5 rounded-2xl shadow-xs flex items-center justify-between">
-          <div className="space-y-1">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Automation Ratio</span>
-            <h3 className="text-2xl font-black text-slate-800 dark:text-white font-sans">{automationRate}%</h3>
-            <span className="text-[10px] text-indigo-600 font-semibold">
-              {automatedCases} of {totalCases} cases automated
-            </span>
-          </div>
-          <div className="p-3 bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 rounded-xl">
-            <Target className="w-5 h-5" />
-          </div>
-        </div>
-
         {/* Active Bugs */}
         <div className="bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 p-5 rounded-2xl shadow-xs flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Active Defects</span>
             <h3 className="text-2xl font-black text-slate-800 dark:text-white font-sans">
-              {bugs.filter(b => b.status !== 'closed' && b.status !== 'rejected').length}
+              {filteredBugs.filter(b => b.status !== 'closed' && b.status !== 'rejected').length}
             </h3>
             <span className="text-[10px] text-rose-600 font-semibold">
-              {bugs.filter(b => b.severity === 'critical').length} Critical severity
+              {filteredBugs.filter(b => b.severity === 'critical').length} Critical severity
             </span>
           </div>
           <div className="p-3 bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 rounded-xl">

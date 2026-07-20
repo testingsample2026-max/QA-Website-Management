@@ -42,7 +42,7 @@ const escapeHTML = (text: string): string => {
  */
 export const exportToWord = (
   title: string,
-  sections: { heading: string; content: string | string[][]; isTable?: boolean; headers?: string[] }[],
+  sections: { heading: string; content: string | string[][]; isTable?: boolean; headers?: string[]; isRecordView?: boolean; recordsType?: string; records?: any[] }[],
   filename: string,
   websiteName: string = 'TestEngine'
 ) => {
@@ -139,7 +139,98 @@ export const exportToWord = (
   sections.forEach(sec => {
     htmlContent += `<h2>${escapeHTML(sec.heading)}</h2>`;
 
-    if (sec.isTable && Array.isArray(sec.content)) {
+    if (sec.isRecordView && Array.isArray(sec.records)) {
+      sec.records.forEach((rec) => {
+        htmlContent += `
+          <div style="border: 1px solid #cbd5e1; border-radius: 12px; padding: 20px; margin-bottom: 25px; background-color: #ffffff; page-break-inside: avoid;">
+            <div style="display: table; width: 100%; border-bottom: 1.5px solid #4f46e5; padding-bottom: 8px; margin-bottom: 15px;">
+              <div style="display: table-cell; vertical-align: middle;">
+                <span style="font-size: 11px; font-weight: bold; color: #4f46e5; text-transform: uppercase; letter-spacing: 1px;">[${escapeHTML(rec.id)}]</span>
+                <span style="font-size: 16px; font-weight: bold; color: #0f172a; margin-left: 10px;">${escapeHTML(rec.title)}</span>
+              </div>
+            </div>
+            
+            <table style="width: 100%; border-collapse: collapse; margin-top: 5px; margin-bottom: 15px; border: none;">
+              <tbody>
+                <tr>
+        `;
+        
+        if (sec.recordsType === 'requirement') {
+          htmlContent += `
+                  <td style="width: 25%; padding: 4px 8px; border: none; font-size: 11px; color: #64748b;"><strong>Project:</strong><br/>${escapeHTML(rec.projectName || rec.projectId)}</td>
+                  <td style="width: 25%; padding: 4px 8px; border: none; font-size: 11px; color: #64748b;"><strong>Module:</strong><br/>${escapeHTML(rec.moduleName || rec.moduleId)}</td>
+                  <td style="width: 25%; padding: 4px 8px; border: none; font-size: 11px;"><strong>Priority:</strong><br/><span style="color: ${rec.priority === 'critical' ? '#dc2626' : rec.priority === 'high' ? '#ea580c' : rec.priority === 'medium' ? '#ca8a04' : '#2563eb'}; font-weight: bold; text-transform: uppercase;">${escapeHTML(rec.priority)}</span></td>
+                  <td style="width: 25%; padding: 4px 8px; border: none; font-size: 11px;"><strong>Status:</strong><br/><span style="color: ${rec.status === 'approved' ? '#16a34a' : rec.status === 'implemented' ? '#4f46e5' : '#475569'}; font-weight: bold; text-transform: uppercase;">${escapeHTML(rec.status)}</span></td>
+          `;
+        } else if (sec.recordsType === 'testcase') {
+          htmlContent += `
+                  <td style="width: 25%; padding: 4px 8px; border: none; font-size: 11px; color: #64748b;"><strong>Project:</strong><br/>${escapeHTML(rec.projectName || rec.projectId)}</td>
+                  <td style="width: 25%; padding: 4px 8px; border: none; font-size: 11px; color: #64748b;"><strong>Module:</strong><br/>${escapeHTML(rec.moduleName || rec.moduleId)}</td>
+                  <td style="width: 25%; padding: 4px 8px; border: none; font-size: 11px;"><strong>Priority:</strong><br/><span style="color: ${rec.priority === 'critical' ? '#dc2626' : rec.priority === 'high' ? '#ea580c' : rec.priority === 'medium' ? '#ca8a04' : '#2563eb'}; font-weight: bold; text-transform: uppercase;">${escapeHTML(rec.priority)}</span></td>
+                  <td style="width: 25%; padding: 4px 8px; border: none; font-size: 11px;"><strong>Status:</strong><br/><span style="color: ${rec.status === 'approved' ? '#16a34a' : rec.status === 'draft' ? '#475569' : '#4f46e5'}; font-weight: bold; text-transform: uppercase;">${escapeHTML(rec.status)}</span></td>
+          `;
+        } else if (sec.recordsType === 'bug') {
+          htmlContent += `
+                  <td style="width: 25%; padding: 4px 8px; border: none; font-size: 11px; color: #64748b;"><strong>Project:</strong><br/>${escapeHTML(rec.projectName || rec.projectId)}</td>
+                  <td style="width: 25%; padding: 4px 8px; border: none; font-size: 11px;"><strong>Severity:</strong><br/><span style="color: ${rec.severity === 'blocker' || rec.severity === 'critical' ? '#dc2626' : '#ea580c'}; font-weight: bold; text-transform: uppercase;">${escapeHTML(rec.severity)}</span></td>
+                  <td style="width: 25%; padding: 4px 8px; border: none; font-size: 11px;"><strong>Priority:</strong><br/><span style="color: ${rec.priority === 'critical' ? '#dc2626' : rec.priority === 'high' ? '#ea580c' : rec.priority === 'medium' ? '#ca8a04' : '#2563eb'}; font-weight: bold; text-transform: uppercase;">${escapeHTML(rec.priority)}</span></td>
+                  <td style="width: 25%; padding: 4px 8px; border: none; font-size: 11px;"><strong>Status:</strong><br/><span style="color: ${rec.status === 'resolved' || rec.status === 'closed' ? '#16a34a' : '#ea580c'}; font-weight: bold; text-transform: uppercase;">${escapeHTML(rec.status)}</span></td>
+          `;
+        } else {
+          htmlContent += `
+                  <td style="width: 50%; padding: 4px 8px; border: none; font-size: 11px; color: #64748b;"><strong>Details:</strong><br/>${escapeHTML(rec.details || '')}</td>
+                  <td style="width: 50%; padding: 4px 8px; border: none; font-size: 11px;"><strong>Status:</strong><br/><span style="font-weight: bold; text-transform: uppercase;">${escapeHTML(rec.status || 'Active')}</span></td>
+          `;
+        }
+
+        htmlContent += `
+                </tr>
+              </tbody>
+            </table>
+        `;
+
+        if (rec.description) {
+          htmlContent += `
+            <div style="margin-top: 10px; padding: 12px; background-color: #f8fafc; border-radius: 8px; border-left: 3px solid #cbd5e1; margin-bottom: 12px;">
+              <span style="font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 5px;">Description Statement</span>
+              <div style="font-size: 12px; color: #334155; line-height: 1.6;">${rec.description.replace(/\n/g, '<br/>')}</div>
+            </div>
+          `;
+        }
+
+        if (sec.recordsType === 'testcase') {
+          if (rec.preconditions) {
+            htmlContent += `
+              <div style="margin-top: 10px; padding: 12px; background-color: #f8fafc; border-radius: 8px; border-left: 3px solid #cbd5e1; margin-bottom: 12px;">
+                <span style="font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 5px;">Preconditions</span>
+                <div style="font-size: 12px; color: #334155; line-height: 1.6;">${rec.preconditions.replace(/\n/g, '<br/>')}</div>
+              </div>
+            `;
+          }
+          if (rec.steps) {
+            htmlContent += `
+              <div style="margin-top: 10px; padding: 12px; background-color: #f8fafc; border-radius: 8px; border-left: 3px solid #cbd5e1; margin-bottom: 12px;">
+                <span style="font-size: 10px; font-weight: bold; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 5px;">Steps / Execution Instructions</span>
+                <div style="font-size: 12px; color: #334155; line-height: 1.6;">${rec.steps.replace(/\n/g, '<br/>')}</div>
+              </div>
+            `;
+          }
+          if (rec.expectedResult) {
+            htmlContent += `
+              <div style="margin-top: 10px; padding: 12px; background-color: #f0fdf4; border-radius: 8px; border-left: 3px solid #16a34a; margin-bottom: 12px;">
+                <span style="font-size: 10px; font-weight: bold; color: #16a34a; text-transform: uppercase; display: block; margin-bottom: 5px;">Expected Result</span>
+                <div style="font-size: 12px; color: #14532d; line-height: 1.6;">${rec.expectedResult.replace(/\n/g, '<br/>')}</div>
+              </div>
+            `;
+          }
+        }
+
+        htmlContent += `
+          </div>
+          <br/>
+        `;
+      });
+    } else if (sec.isTable && Array.isArray(sec.content)) {
       htmlContent += `<table><thead><tr>`;
       if (sec.headers) {
         sec.headers.forEach(h => {
@@ -193,7 +284,7 @@ export const exportToWord = (
  */
 export const exportToPDF = (
   title: string,
-  sections: { heading: string; content: string | string[][]; isTable?: boolean; headers?: string[] }[],
+  sections: { heading: string; content: string | string[][]; isTable?: boolean; headers?: string[]; isRecordView?: boolean; recordsType?: string; records?: any[] }[],
   filename: string,
   websiteName: string = 'TestEngine'
 ) => {
@@ -289,7 +380,225 @@ export const exportToPDF = (
     doc.line(margin, y, margin + 40, y);
     y += 6;
 
-    if (sec.isTable && Array.isArray(sec.content)) {
+    if (sec.isRecordView && Array.isArray(sec.records)) {
+      sec.records.forEach((rec) => {
+        // Estimate height for record box: header (10mm) + metadata grid (12mm) + descriptions/blocks
+        let estimatedHeight = 25;
+        const descLines = rec.description ? doc.splitTextToSize(rec.description, contentWidth - 10) : [];
+        if (rec.description) {
+          estimatedHeight += (descLines.length * 4.5) + 8;
+        }
+        
+        let preLines: string[] = [];
+        let stepLines: string[] = [];
+        let expLines: string[] = [];
+        
+        if (sec.recordsType === 'testcase') {
+          if (rec.preconditions) {
+            preLines = doc.splitTextToSize(rec.preconditions, contentWidth - 14);
+            estimatedHeight += (preLines.length * 4.5) + 8;
+          }
+          if (rec.steps) {
+            stepLines = doc.splitTextToSize(rec.steps, contentWidth - 14);
+            estimatedHeight += (stepLines.length * 4.5) + 8;
+          }
+          if (rec.expectedResult) {
+            expLines = doc.splitTextToSize(rec.expectedResult, contentWidth - 14);
+            estimatedHeight += (expLines.length * 4.5) + 8;
+          }
+        }
+
+        addNewPageIfNeeded(estimatedHeight + 10);
+
+        // Draw record container card background
+        doc.setFillColor(255, 255, 255);
+        doc.setDrawColor(203, 213, 225); // slate-300
+        doc.setLineWidth(0.3);
+        doc.rect(margin, y, contentWidth, estimatedHeight, 'FD');
+
+        // Draw card header band background
+        doc.setFillColor(248, 250, 252); // slate-50
+        doc.rect(margin + 0.1, y + 0.1, contentWidth - 0.2, 8.5, 'F');
+        doc.setDrawColor(226, 232, 240);
+        doc.line(margin, y + 8.5, margin + contentWidth, y + 8.5);
+
+        // Header Text
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(79, 70, 229); // indigo-600
+        doc.text(`[${rec.id}]`, margin + 4, y + 5.5);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(15, 23, 42); // slate-900
+        const titleText = rec.title.length > 70 ? rec.title.substring(0, 67) + '...' : rec.title;
+        doc.text(titleText, margin + 20, y + 5.5);
+
+        y += 8.5;
+
+        // Draw Metadata Grid Headers
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7);
+        doc.setTextColor(148, 163, 184); // slate-400
+        doc.text('PROJECT', margin + 4, y + 4);
+        
+        if (sec.recordsType === 'requirement' || sec.recordsType === 'testcase') {
+          doc.text('MODULE', margin + (contentWidth / 4) + 4, y + 4);
+          doc.text('PRIORITY', margin + (contentWidth / 2) + 4, y + 4);
+          doc.text('STATUS', margin + (3 * contentWidth / 4) + 4, y + 4);
+        } else if (sec.recordsType === 'bug') {
+          doc.text('SEVERITY', margin + (contentWidth / 4) + 4, y + 4);
+          doc.text('PRIORITY', margin + (contentWidth / 2) + 4, y + 4);
+          doc.text('STATUS', margin + (3 * contentWidth / 4) + 4, y + 4);
+        } else {
+          doc.text('STATUS', margin + (contentWidth / 2) + 4, y + 4);
+        }
+
+        // Draw Metadata Grid Values
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(51, 65, 85); // slate-700
+        doc.text(String(rec.projectName || rec.projectId).substring(0, 16), margin + 4, y + 8);
+        
+        if (sec.recordsType === 'requirement' || sec.recordsType === 'testcase') {
+          doc.text(String(rec.moduleName || rec.moduleId).substring(0, 16), margin + (contentWidth / 4) + 4, y + 8);
+          
+          doc.setFont('helvetica', 'bold');
+          const prio = String(rec.priority).toUpperCase();
+          if (prio === 'CRITICAL') doc.setTextColor(220, 38, 38);
+          else if (prio === 'HIGH') doc.setTextColor(234, 88, 12);
+          else if (prio === 'MEDIUM') doc.setTextColor(202, 138, 4);
+          else doc.setTextColor(37, 99, 235);
+          doc.text(prio, margin + (contentWidth / 2) + 4, y + 8);
+
+          const statusStr = String(rec.status).toUpperCase();
+          doc.setFont('helvetica', 'bold');
+          if (statusStr === 'APPROVED' || statusStr === 'RESOLVED') doc.setTextColor(22, 163, 74);
+          else if (statusStr === 'IMPLEMENTED' || statusStr === 'CLOSED') doc.setTextColor(79, 70, 229);
+          else doc.setTextColor(100, 116, 139);
+          doc.text(statusStr, margin + (3 * contentWidth / 4) + 4, y + 8);
+        } else if (sec.recordsType === 'bug') {
+          doc.setFont('helvetica', 'bold');
+          const sev = String(rec.severity).toUpperCase();
+          if (sev === 'BLOCKER' || sev === 'CRITICAL') doc.setTextColor(220, 38, 38);
+          else doc.setTextColor(234, 88, 12);
+          doc.text(sev, margin + (contentWidth / 4) + 4, y + 8);
+          
+          const prio = String(rec.priority).toUpperCase();
+          if (prio === 'CRITICAL') doc.setTextColor(220, 38, 38);
+          else if (prio === 'HIGH') doc.setTextColor(234, 88, 12);
+          else if (prio === 'MEDIUM') doc.setTextColor(202, 138, 4);
+          else doc.setTextColor(37, 99, 235);
+          doc.text(prio, margin + (contentWidth / 2) + 4, y + 8);
+
+          const statusStr = String(rec.status).toUpperCase();
+          if (statusStr === 'RESOLVED' || statusStr === 'CLOSED') doc.setTextColor(22, 163, 74);
+          else doc.setTextColor(220, 38, 38);
+          doc.text(statusStr, margin + (3 * contentWidth / 4) + 4, y + 8);
+        } else {
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(100, 116, 139);
+          doc.text(String(rec.status || 'ACTIVE').toUpperCase(), margin + (contentWidth / 2) + 4, y + 8);
+        }
+
+        y += 11;
+
+        // Description Box
+        if (rec.description) {
+          doc.setFillColor(248, 250, 252); // slate-50
+          const boxHeight = (descLines.length * 4.5) + 5;
+          doc.rect(margin + 3, y, contentWidth - 6, boxHeight, 'F');
+          
+          doc.setDrawColor(203, 213, 225); // slate-300
+          doc.line(margin + 3, y, margin + 3, y + boxHeight); // left accent
+          
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(6.5);
+          doc.setTextColor(148, 163, 184); // slate-400
+          doc.text('DESCRIPTION STATEMENT', margin + 6, y + 3.5);
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8);
+          doc.setTextColor(51, 65, 85);
+          descLines.forEach((lineText: string, lineIdx: number) => {
+            doc.text(lineText, margin + 6, y + 7.5 + (lineIdx * 4.5));
+          });
+
+          y += boxHeight + 3;
+        }
+
+        // Testcase Preconditions, Steps, Expected Result boxes
+        if (sec.recordsType === 'testcase') {
+          if (rec.preconditions) {
+            const boxHeight = (preLines.length * 4.5) + 5;
+            doc.setFillColor(248, 250, 252);
+            doc.rect(margin + 3, y, contentWidth - 6, boxHeight, 'F');
+            doc.setDrawColor(203, 213, 225);
+            doc.line(margin + 3, y, margin + 3, y + boxHeight);
+            
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(6.5);
+            doc.setTextColor(148, 163, 184);
+            doc.text('PRECONDITIONS', margin + 6, y + 3.5);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(51, 65, 85);
+            preLines.forEach((lineText: string, lineIdx: number) => {
+              doc.text(lineText, margin + 6, y + 7.5 + (lineIdx * 4.5));
+            });
+
+            y += boxHeight + 3;
+          }
+
+          if (rec.steps) {
+            const boxHeight = (stepLines.length * 4.5) + 5;
+            doc.setFillColor(248, 250, 252);
+            doc.rect(margin + 3, y, contentWidth - 6, boxHeight, 'F');
+            doc.setDrawColor(203, 213, 225);
+            doc.line(margin + 3, y, margin + 3, y + boxHeight);
+            
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(6.5);
+            doc.setTextColor(148, 163, 184);
+            doc.text('STEPS / EXECUTION INSTRUCTIONS', margin + 6, y + 3.5);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(51, 65, 85);
+            stepLines.forEach((lineText: string, lineIdx: number) => {
+              doc.text(lineText, margin + 6, y + 7.5 + (lineIdx * 4.5));
+            });
+
+            y += boxHeight + 3;
+          }
+
+          if (rec.expectedResult) {
+            const boxHeight = (expLines.length * 4.5) + 5;
+            doc.setFillColor(240, 253, 244); // light green bg
+            doc.rect(margin + 3, y, contentWidth - 6, boxHeight, 'F');
+            doc.setDrawColor(34, 197, 94); // green-500 left accent border
+            doc.line(margin + 3, y, margin + 3, y + boxHeight);
+            
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(6.5);
+            doc.setTextColor(22, 163, 74);
+            doc.text('EXPECTED RESULT', margin + 6, y + 3.5);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(20, 83, 45); // dark green text
+            expLines.forEach((lineText: string, lineIdx: number) => {
+              doc.text(lineText, margin + 6, y + 7.5 + (lineIdx * 4.5));
+            });
+
+            y += boxHeight + 3;
+          }
+        }
+
+        y += 8; // Card gap
+      });
+    } else if (sec.isTable && Array.isArray(sec.content)) {
       const headers = sec.headers || [];
       const rows = sec.content;
       const colWidth = contentWidth / Math.max(headers.length, 1);

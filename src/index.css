@@ -80,72 +80,106 @@
 .border-style-thick textarea {
   border-width: 1px !important;
 }
-
-/* CKEditor 5 Styling and Dark Mode overrides */
-.ck.ck-editor {
-  width: 100% !important;
+/* Styling for Markdown & rich text rendering */
+.markdown-body strong, 
+.markdown-body b {
+  font-weight: 700 !important;
+  color: var(--color-slate-900, #0f172a) !important;
 }
 
-.ck.ck-editor__main>.ck-editor__editable {
-  min-height: 180px !important;
-  border-bottom-left-radius: 0.75rem !important;
-  border-bottom-right-radius: 0.75rem !important;
-  border-color: var(--border-200, #e2e8f0) !important;
-  font-size: 0.875rem !important;
-  line-height: 1.5rem !important;
-  color: #1e293b !important;
-  background-color: #ffffff !important;
-}
-
-.ck.ck-toolbar {
-  border-top-left-radius: 0.75rem !important;
-  border-top-right-radius: 0.75rem !important;
-  border-color: var(--border-200, #e2e8f0) !important;
-  background-color: #f8fafc !important;
-}
-
-.ck.ck-editor__main>.ck-editor__editable.ck-focused {
-  border-color: var(--app-color-500, #6366f1) !important;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1) !important;
-}
-
-/* Dark Mode styles for CKEditor */
-.dark .ck.ck-editor__main>.ck-editor__editable {
-  background-color: #090d16 !important;
-  color: #cbd5e1 !important;
-  border-color: var(--border-800, #334155) !important;
-}
-
-.dark .ck.ck-toolbar {
-  background-color: #0f172a !important;
-  border-color: var(--border-800, #334155) !important;
-}
-
-.dark .ck.ck-button {
-  color: #94a3b8 !important;
-}
-
-.dark .ck.ck-button:hover {
-  background-color: #1e293b !important;
-  color: #f1f5f9 !important;
-}
-
-.dark .ck.ck-button.ck-on {
-  background-color: #334155 !important;
+.dark .markdown-body strong, 
+.dark .markdown-body b {
   color: #ffffff !important;
 }
 
-.dark .ck.ck-button.ck-on:hover {
-  background-color: #475569 !important;
+.markdown-body em, 
+.markdown-body i {
+  font-style: italic !important;
 }
 
-.dark .ck.ck-dropdown__panel {
-  background-color: #0f172a !important;
-  border-color: var(--border-800, #334155) !important;
+.markdown-body u {
+  text-decoration: underline !important;
 }
 
-.dark .ck-editor__main .ck-placeholder {
+.markdown-body s, 
+.markdown-body del {
+  text-decoration: line-through !important;
+}
+
+.markdown-body h1 {
+  font-size: 1.875rem !important;
+  font-weight: 800 !important;
+  margin-top: 1.5rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.markdown-body h2 {
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  margin-top: 1.25rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.markdown-body h3 {
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  margin-top: 1rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.markdown-body h4 {
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  margin-top: 0.75rem !important;
+  margin-bottom: 0.25rem !important;
+}
+
+.markdown-body ul {
+  list-style-type: disc !important;
+  padding-left: 1.5rem !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.markdown-body ol {
+  list-style-type: decimal !important;
+  padding-left: 1.5rem !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.markdown-body li {
+  margin-bottom: 0.25rem !important;
+}
+
+.markdown-body p {
+  margin-bottom: 0.75rem !important;
+}
+
+.markdown-body blockquote {
+  border-left: 4px solid #cbd5e1 !important;
+  padding-left: 1rem !important;
+  font-style: italic !important;
   color: #475569 !important;
+  margin: 1rem 0 !important;
 }
+
+.dark .markdown-body blockquote {
+  border-color: #334155 !important;
+  color: #94a3b8 !important;
+}
+
+.markdown-body code {
+  font-family: var(--font-mono) !important;
+  background-color: #f1f5f9 !important;
+  padding: 0.125rem 0.25rem !important;
+  border-radius: 0.25rem !important;
+  font-size: 0.875em !important;
+}
+
+.dark .markdown-body code {
+  background-color: #1e293b !important;
+}
+
 
 

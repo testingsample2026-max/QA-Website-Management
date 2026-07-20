@@ -152,82 +152,67 @@ export const RequirementsView: React.FC = () => {
     }, 50);
   };
 
-  const readFallbackOrWarn = (file: File, callback: (dataUrl: string) => void) => {
-    if (file.size > 1.5 * 1024 * 1024) {
-      addNotification('Image Too Large', 'The image is too large and could not be compressed. Please upload an image under 1.5MB.', 'error');
-      return;
-    }
+  const compressImage = (file: File, callback: (dataUrl: string) => void) => {
     const reader = new FileReader();
+    reader.onerror = () => {
+      addNotification('Upload Failed', 'Could not read image file.', 'error');
+    };
     reader.onload = () => {
-      callback(reader.result as string);
+      const dataUrl = reader.result as string;
+      
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+
+          // Max dimensions to keep image lightweight and highly legible
+          const MAX_WIDTH = 900;
+          const MAX_HEIGHT = 700;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height = Math.round(height * (MAX_WIDTH / width));
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width = Math.round(width * (MAX_HEIGHT / height));
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            // Fill white background for transparent PNG compatibility in JPEG format
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Efficient JPEG encoding at 0.6 quality for lightweight size
+            const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.6);
+            callback(compressedDataUrl);
+          } else {
+            callback(dataUrl);
+          }
+        } catch (err) {
+          console.error("Compression error:", err);
+          callback(dataUrl); // Fallback to raw dataUrl if canvas fails
+        }
+      };
+
+      img.onerror = () => {
+        console.error("Image load error in canvas compression");
+        callback(dataUrl); // Fallback to raw dataUrl
+      };
+
+      img.src = dataUrl;
     };
     reader.readAsDataURL(file);
-  };
-
-  const compressImage = (file: File, callback: (dataUrl: string) => void) => {
-    let objectUrl: string | null = null;
-    try {
-      objectUrl = URL.createObjectURL(file);
-    } catch (e) {
-      readFallbackOrWarn(file, callback);
-      return;
-    }
-
-    const img = new Image();
-    
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-
-        // Max dimensions to keep image lightweight but highly legible
-        const MAX_WIDTH = 800;
-        const MAX_HEIGHT = 600;
-
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height = Math.round(height * (MAX_WIDTH / width));
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width = Math.round(width * (MAX_HEIGHT / height));
-            height = MAX_HEIGHT;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          // Fill white background for transparent PNG compatibility in JPEG format
-          ctx.fillStyle = '#FFFFFF';
-          ctx.fillRect(0, 0, width, height);
-          ctx.drawImage(img, 0, 0, width, height);
-          
-          // Highly efficient JPEG encoding at 0.5 quality
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
-          if (objectUrl) URL.revokeObjectURL(objectUrl);
-          callback(dataUrl);
-        } else {
-          if (objectUrl) URL.revokeObjectURL(objectUrl);
-          readFallbackOrWarn(file, callback);
-        }
-      } catch (err) {
-        console.error("Compression error:", err);
-        if (objectUrl) URL.revokeObjectURL(objectUrl);
-        readFallbackOrWarn(file, callback);
-      }
-    };
-
-    img.onerror = () => {
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-      readFallbackOrWarn(file, callback);
-    };
-
-    img.src = objectUrl;
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, elementId: string) => {

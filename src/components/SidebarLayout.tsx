@@ -243,7 +243,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
     }
   };
 
-  const getPageDataAsSections = (): { heading: string; content: string[][]; isTable: boolean; headers: string[] } | null => {
+  const getPageDataAsSections = (): { heading: string; content: string[][]; isTable: boolean; headers: string[]; isRecordView?: boolean; recordsType?: string; records?: any[] } | null => {
     switch (activeTab) {
       case 'dashboard':
         return {
@@ -338,26 +338,81 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
           content: modules.map(m => [m.id, m.projectId, m.name, m.description || '', m.status || 'active']),
           isTable: true
         };
-      case 'requirements':
+            case 'requirements':
         return {
           heading: 'Product Requirements',
-          headers: ['ID', 'Project ID', 'Title', 'Priority', 'Status'],
-          content: requirements.map(r => [r.id, r.projectId, r.title, r.priority, r.status]),
-          isTable: true
+          headers: ['ID', 'Project ID', 'Module ID', 'Title', 'Description / User Story', 'Priority', 'Status', 'Created At'],
+          content: requirements.map(r => [
+            r.id,
+            r.projectId,
+            r.moduleId,
+            r.title,
+            r.description || '',
+            r.priority,
+            r.status,
+            r.createdAt
+          ]),
+          isTable: true,
+          isRecordView: true,
+          recordsType: 'requirement',
+          records: requirements.map(r => ({
+            id: r.id,
+            title: r.title,
+            projectId: r.projectId,
+            moduleId: r.moduleId,
+            projectName: projects.find(p => p.id === r.projectId)?.name || r.projectId,
+            moduleName: modules.find(m => m.id === r.moduleId)?.name || r.moduleId,
+            priority: r.priority,
+            status: r.status,
+            description: r.description || '',
+            createdAt: r.createdAt
+          }))
         };
       case 'testcases':
         return {
           heading: 'Test Cases Repository',
           headers: ['ID', 'Title', 'Priority', 'Status', 'Last Exec Status'],
           content: testCases.map(t => [t.id, t.title, t.priority, t.status, t.lastExecutionStatus || 'unexecuted']),
-          isTable: true
+          isTable: true,
+          isRecordView: true,
+          recordsType: 'testcase',
+          records: testCases.map(t => ({
+            id: t.id,
+            title: t.title,
+            projectId: t.projectId,
+            moduleId: t.moduleId,
+            projectName: projects.find(p => p.id === t.projectId)?.name || t.projectId,
+            moduleName: modules.find(m => m.id === t.moduleId)?.name || t.moduleId,
+            priority: t.priority,
+            status: t.status,
+            description: t.description || '',
+            preconditions: t.preconditions || '',
+            steps: t.steps || '',
+            expectedResult: t.expectedResult || '',
+            createdAt: t.createdAt
+          }))
         };
       case 'bugs':
         return {
           heading: 'Bugs / Issues Ledger',
           headers: ['ID', 'Title', 'Severity', 'Priority', 'Status'],
           content: bugs.map(b => [b.id, b.title, b.severity, b.priority, b.status]),
-          isTable: true
+          isTable: true,
+          isRecordView: true,
+          recordsType: 'bug',
+          records: bugs.map(b => ({
+            id: b.id,
+            title: b.title,
+            projectId: b.projectId,
+            moduleId: b.moduleId,
+            projectName: projects.find(p => p.id === b.projectId)?.name || b.projectId,
+            moduleName: modules.find(m => m.id === b.moduleId)?.name || b.moduleId,
+            severity: b.severity,
+            priority: b.priority,
+            status: b.status,
+            description: b.description || '',
+            createdAt: b.createdAt
+          }))
         };
       case 'developers':
         return {
