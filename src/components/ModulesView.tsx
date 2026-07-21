@@ -537,7 +537,6 @@ export const ModulesView: React.FC = () => {
                     placeholder="e.g., Authentication Services"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    maxLength={40}
                     className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
                     required
                   />
@@ -625,7 +624,6 @@ export const ModulesView: React.FC = () => {
                   placeholder="e.g., Authentication Services"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  maxLength={45}
                   className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
                   required
                 />
