@@ -84,7 +84,7 @@ export const TestCasesView: React.FC = () => {
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Drawer / Side Panel for executions & details
   const [activeTestCaseId, setActiveTestCaseId] = useState<string | null>(null);
