@@ -103,10 +103,12 @@ export const ReportsView: React.FC = () => {
   const totalCases = filteredTestCases.length;
   const automatedCases = filteredTestCases.filter(c => c.type === 'automated').length;
   const automationRate = totalCases > 0 ? Math.round((automatedCases / totalCases) * 100) : 0;
+  const manualCases = totalCases - automatedCases;
+  const manualRate = totalCases > 0 ? Math.round((manualCases / totalCases) * 100) : 0;
 
   // 3. Automated vs Manual Pie Data
   const typeDistributionData = [
-    { name: 'Manual Cases', value: totalCases - automatedCases },
+    { name: 'Manual Cases', value: manualCases },
     { name: 'Automated', value: automatedCases }
   ].filter(d => d.value > 0);
 
@@ -633,11 +635,19 @@ Total Logged Defects: ${filteredBugs.length}
                     ))}
                   </Pie>
                   <Tooltip formatter={(value) => [`${value} Cases`, 'Volume']} />
-                  <Legend verticalAlign="bottom" height={36} />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={36} 
+                    formatter={(value) => {
+                      const isManual = value === 'Manual Cases';
+                      const pct = isManual ? manualRate : automationRate;
+                      return <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">{value}: {pct}%</span>;
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
               <div className="text-center text-[11px] font-medium text-slate-500 mt-2">
-                Automated tests compose <strong>{automationRate}%</strong> of your entire catalog.
+                Manual Cases Ratio: <strong>{manualRate}%</strong> ({manualCases} of {totalCases} cases)
               </div>
             </div>
           )}
