@@ -479,7 +479,6 @@ export const ReleasesView: React.FC = () => {
                   placeholder="e.g., Includes critical multi-factor auth features, security hardening patches..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  maxLength={200}
                   rows={3}
                   className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden"
                 />
@@ -587,7 +586,6 @@ export const ReleasesView: React.FC = () => {
                   placeholder="Details..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  maxLength={200}
                   rows={3}
                   className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-250 text-sm rounded-xl focus:outline-hidden"
                 />
