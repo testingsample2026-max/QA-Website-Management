@@ -380,12 +380,8 @@ export const TestCasesView: React.FC = () => {
     });
 
     if (res.success) {
-      setExecNotes('');
-      setActualResult('');
-      setRunTimeMs('');
-      setExecutionAttachments([]);
-      setActiveTestCaseId(null);
       addNotification("Execution Tracked", `Logged execution for ${activeTestCaseId} successfully.`, 'success');
+      // Intentionally keep actualResult, runTimeMs, execNotes, and executionAttachments filled so user edits are retained and not reset
     } else {
       setExecFormError(res.error || 'Failed to log execution.');
     }
@@ -1323,13 +1319,13 @@ export const TestCasesView: React.FC = () => {
 
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Actual Result / Log</label>
-                        <input
-                          type="text"
+                        <textarea
+                          rows={2}
                           placeholder="e.g., Returns expected API payload with 200 OK"
                           value={actualResult}
                           onChange={(e) => setActualResult(e.target.value)}
-                          maxLength={100}
-                          className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-xs rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-hidden transition-all shadow-xs"
+                          maxLength={2000}
+                          className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-xs rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-hidden transition-all shadow-xs resize-y font-mono"
                           required
                         />
                       </div>
@@ -1349,13 +1345,13 @@ export const TestCasesView: React.FC = () => {
 
                         <div className="space-y-1.5">
                           <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Execution Notes</label>
-                          <input
-                            type="text"
+                          <textarea
+                            rows={2}
                             placeholder="Optional remarks..."
                             value={execNotes}
                             onChange={(e) => setExecNotes(e.target.value)}
-                            maxLength={100}
-                            className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-xs rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-hidden transition-all shadow-xs"
+                            maxLength={2000}
+                            className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-xs rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-hidden transition-all shadow-xs resize-y font-mono"
                           />
                         </div>
                       </div>
@@ -1519,20 +1515,35 @@ export const TestCasesView: React.FC = () => {
                         )}
                       </div>
 
-                      <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-100 dark:border-slate-800">
+                      <div className="pt-3 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">
                         <button
                           type="button"
-                          onClick={() => setActiveTestCaseId(null)}
-                          className="px-4 py-2 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-xs rounded-lg hover:bg-slate-50 dark:hover:bg-slate-950 transition-colors cursor-pointer"
+                          onClick={() => {
+                            setActualResult('');
+                            setRunTimeMs('');
+                            setExecNotes('');
+                            setExecutionAttachments([]);
+                          }}
+                          className="px-3 py-1.5 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-medium text-xs rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                          title="Clear all execution form fields"
                         >
-                          Cancel
+                          Clear Form
                         </button>
-                        <button
-                          type="submit"
-                          className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg shadow-xs transition-colors cursor-pointer"
-                        >
-                          Post Execution Result
-                        </button>
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setActiveTestCaseId(null)}
+                            className="px-4 py-2 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold text-xs rounded-lg hover:bg-slate-50 dark:hover:bg-slate-950 transition-colors cursor-pointer"
+                          >
+                            Close
+                          </button>
+                          <button
+                            type="submit"
+                            className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg shadow-xs transition-colors cursor-pointer"
+                          >
+                            Post Execution Result
+                          </button>
+                        </div>
                       </div>
                     </form>
                   </div>
