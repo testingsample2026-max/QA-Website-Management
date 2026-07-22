@@ -19,13 +19,17 @@ import {
   FileText,
   Calendar,
   Layers,
-  BookOpen
+  BookOpen,
+  Eye
 } from 'lucide-react';
 
 export const ReleasesView: React.FC = () => {
   const {
     releases,
     projects,
+    modules,
+    testCases,
+    bugs,
     addRelease,
     updateRelease,
     deleteRelease,
@@ -47,6 +51,7 @@ export const ReleasesView: React.FC = () => {
   // Forms state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [viewRelease, setViewRelease] = useState<Release | null>(null);
   const [selectedRelease, setSelectedRelease] = useState<Release | null>(null);
 
   const [projectId, setProjectId] = useState('');
@@ -343,6 +348,15 @@ export const ReleasesView: React.FC = () => {
                         </span>
                       </td>
                       <td className="p-4 text-right flex items-center justify-end gap-1.5">
+                        {/* View */}
+                        <button
+                          onClick={() => setViewRelease(r)}
+                          title="View Release Details & Changelog"
+                          className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 rounded-lg cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+
                         {/* Edit */}
                         <button
                           onClick={() => openEditModal(r)}
@@ -607,6 +621,160 @@ export const ReleasesView: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW RELEASE MODAL */}
+      {viewRelease && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div onClick={() => setViewRelease(null)} className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs" />
+          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden z-10 p-6 animate-fade-in max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                  <GitPullRequest className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white font-sans">
+                      {viewRelease.version}
+                    </h3>
+                    <span className="font-mono text-xs font-semibold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                      {viewRelease.id}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Release Version Details
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setViewRelease(null)} 
+                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto py-4 space-y-5 text-sm">
+              {/* Status and Key Meta Grid */}
+              <div className="grid grid-cols-2 gap-3 p-3.5 bg-slate-50 dark:bg-slate-950/50 border border-slate-100 dark:border-slate-800/80 rounded-xl">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block mb-1">
+                    Build Status
+                  </span>
+                  <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                    viewRelease.status === 'stable' ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400' :
+                    viewRelease.status === 'beta' ? 'bg-purple-50 dark:bg-purple-950/20 text-purple-700 dark:text-purple-400' :
+                    viewRelease.status === 'draft' ? 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300' :
+                    'bg-red-50 dark:bg-red-950/20 text-red-700'
+                  }`}>
+                    {viewRelease.status === 'beta' ? 'Beta Build' : viewRelease.status}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block mb-1">
+                    Project Scope
+                  </span>
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1">
+                    <Layers className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                    <span>
+                      {projects.find(p => p.id === viewRelease.projectId)?.name || viewRelease.projectId}
+                    </span>
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block mb-1">
+                    Target Release Date
+                  </span>
+                  <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    {new Date(viewRelease.releaseDate).toLocaleDateString(undefined, { dateStyle: 'full' })}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block mb-1">
+                    Created Date
+                  </span>
+                  <span className="text-xs font-mono text-slate-600 dark:text-slate-400">
+                    {new Date(viewRelease.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Release Changelog & Details */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>Release Changelog / Details</span>
+                </label>
+                <div className="p-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-800 dark:text-slate-200 text-xs leading-relaxed whitespace-pre-wrap min-h-[90px]">
+                  {viewRelease.notes ? (
+                    viewRelease.notes
+                  ) : (
+                    <span className="italic text-slate-400">No changelog or release details provided.</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Associated Project Inventory */}
+              {(() => {
+                const projModules = modules.filter(m => m.projectId === viewRelease.projectId);
+                const projCases = testCases.filter(tc => tc.projectId === viewRelease.projectId);
+                const projBugs = bugs.filter(b => b.projectId === viewRelease.projectId);
+
+                return (
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 block">
+                      Scope Project Stats ({viewRelease.projectId})
+                    </span>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="p-2.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-150 dark:border-slate-800 rounded-xl text-center">
+                        <span className="text-base font-black text-slate-800 dark:text-slate-200 block">{projModules.length}</span>
+                        <span className="text-[10px] text-slate-400 font-medium">Modules</span>
+                      </div>
+                      <div className="p-2.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-150 dark:border-slate-800 rounded-xl text-center">
+                        <span className="text-base font-black text-indigo-600 dark:text-indigo-400 block">{projCases.length}</span>
+                        <span className="text-[10px] text-slate-400 font-medium">Test Cases</span>
+                      </div>
+                      <div className="p-2.5 bg-slate-50 dark:bg-slate-950/60 border border-slate-150 dark:border-slate-800 rounded-xl text-center">
+                        <span className="text-base font-black text-rose-600 dark:text-rose-400 block">{projBugs.length}</span>
+                        <span className="text-[10px] text-slate-400 font-medium">Total Defects</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800 mt-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  const rel = viewRelease;
+                  setViewRelease(null);
+                  openEditModal(rel);
+                }}
+                className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+              >
+                <Edit className="w-3.5 h-3.5" />
+                <span>Edit Release</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewRelease(null)}
+                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-xs cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
