@@ -1098,7 +1098,7 @@ export const TestCasesView: React.FC = () => {
                         <span className="font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide text-[9px] block mb-1">
                           Expected Result:
                         </span>
-                        <p className="text-xs font-semibold text-slate-850 dark:text-slate-200 leading-relaxed">
+                        <p className="text-xs font-semibold text-slate-850 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">
                           {activeTestCase.expectedResult}
                         </p>
                       </div>
@@ -2081,8 +2081,8 @@ export const TestCasesView: React.FC = () => {
                 </div>
 
                 <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Expected Outcome</span>
-                  <div className="bg-slate-50/20 dark:bg-slate-950/10 border border-slate-150 dark:border-slate-800 p-3 rounded-xl text-xs font-medium text-slate-800 dark:text-slate-200 min-h-[60px] leading-relaxed">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Expected Result</span>
+                  <div className="bg-emerald-50/20 dark:bg-emerald-950/10 border border-slate-150 dark:border-slate-800 border-l-4 border-l-emerald-500 p-3 rounded-xl text-xs font-medium text-slate-800 dark:text-slate-200 min-h-[60px] leading-relaxed whitespace-pre-wrap">
                     {viewTestCase.expectedResult}
                   </div>
                 </div>

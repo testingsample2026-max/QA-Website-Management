@@ -1257,19 +1257,22 @@ export const BugsView: React.FC = () => {
                       </p>
                     );
                     return (
-                      <div className="border border-slate-150 dark:border-slate-800 p-3.5 bg-white dark:bg-slate-900 rounded-xl flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2 min-w-0 pr-2 font-sans">
-                          <span className="font-mono text-[10px] font-bold text-indigo-500 shrink-0">{tc.id}</span>
-                          <div className="truncate">
+                      <div className="border border-slate-150 dark:border-slate-800 p-3.5 bg-white dark:bg-slate-900 rounded-xl text-xs space-y-2.5">
+                        <div className="flex items-center justify-between gap-2 font-sans">
+                          <div className="flex items-center gap-2 min-w-0 pr-2">
+                            <span className="font-mono text-[10px] font-bold text-indigo-500 shrink-0">{tc.id}</span>
                             <p className="font-semibold text-slate-700 dark:text-slate-300 truncate">{tc.title}</p>
-                            <span className="text-[9px] text-slate-450">Exp Result: {tc.expectedResult}</span>
                           </div>
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase shrink-0 ${
+                            tc.lastExecutionStatus === 'passed' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+                          }`}>
+                            Last Exec: {tc.lastExecutionStatus || 'unexecuted'}
+                          </span>
                         </div>
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase shrink-0 ${
-                          tc.lastExecutionStatus === 'passed' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
-                        }`}>
-                          Last Exec: {tc.lastExecutionStatus || 'unexecuted'}
-                        </span>
+                        <div className="bg-emerald-50/20 dark:bg-emerald-950/10 border-l-2 border-emerald-500 p-2.5 rounded-r-lg">
+                          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block mb-0.5">Expected Result:</span>
+                          <p className="text-xs text-slate-700 dark:text-slate-300 font-medium whitespace-pre-wrap leading-relaxed">{tc.expectedResult}</p>
+                        </div>
                       </div>
                     );
                   })()}
