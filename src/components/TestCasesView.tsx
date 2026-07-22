@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { TestCase, TestExecution } from '../types';
 import { EmptyState } from './EmptyState';
@@ -33,8 +33,44 @@ import {
   Info,
   Paperclip,
   UploadCloud,
-  Eye
+  Eye,
+  Download,
+  Video,
+  Film,
+  FileText,
+  File
 } from 'lucide-react';
+
+const isImageFile = (att: { name: string; type?: string; data: string }) => {
+  return (
+    (att.type && att.type.startsWith('image/')) ||
+    (att.data && att.data.startsWith('data:image/')) ||
+    /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i.test(att.name)
+  );
+};
+
+const isVideoFile = (att: { name: string; type?: string; data: string }) => {
+  return (
+    (att.type && att.type.startsWith('video/')) ||
+    (att.data && att.data.startsWith('data:video/')) ||
+    /\.(mp4|webm|ogg|mov|m4v|mkv|avi)$/i.test(att.name)
+  );
+};
+
+const isPdfFile = (att: { name: string; type?: string; data: string }) => {
+  return (
+    (att.type && att.type.includes('pdf')) ||
+    (att.data && att.data.startsWith('data:application/pdf')) ||
+    /\.pdf$/i.test(att.name)
+  );
+};
+
+const isWordFile = (att: { name: string; type?: string; data: string }) => {
+  return (
+    (att.type && (att.type.includes('word') || att.type.includes('officedocument'))) ||
+    /\.(doc|docx)$/i.test(att.name)
+  );
+};
 
 export const TestCasesView: React.FC = () => {
   const {
@@ -100,6 +136,8 @@ export const TestCasesView: React.FC = () => {
   const [execFormError, setExecFormError] = useState('');
   const [executionAttachments, setExecutionAttachments] = useState<{ name: string; type: string; data: string }[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [previewMedia, setPreviewMedia] = useState<{ name: string; url: string; type: 'image' | 'video' } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addAttachment = (name: string, type: string, data: string) => {
     setExecutionAttachments(prev => {
@@ -111,89 +149,100 @@ export const TestCasesView: React.FC = () => {
     });
   };
 
-  const readTestCaseFileFallback = (file: File) => {
-    if (file.size > 1.5 * 1024 * 1024) {
-      addNotification('File Too Large', `File "${file.name}" is too large (> 1.5MB) to upload without exceeding database size limits.`, 'error');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64Data = reader.result as string;
-      addAttachment(file.name, file.type, base64Data);
-    };
-    reader.readAsDataURL(file);
-  };
-
   const processFiles = (files: File[]) => {
     files.forEach(file => {
-      if (file.type.startsWith('image/')) {
-        let objectUrl: string | null = null;
-        try {
-          objectUrl = URL.createObjectURL(file);
-        } catch (e) {
-          readTestCaseFileFallback(file);
-          return;
-        }
+      if (file.size > 15 * 1024 * 1024) {
+        addNotification('File Too Large', `File "${file.name}" is too large (> 15MB). Please attach files under 15MB.`, 'error');
+        return;
+      }
 
-        const img = new Image();
-        img.onload = () => {
-          try {
-            const canvas = document.createElement('canvas');
-            let width = img.width;
-            let height = img.height;
-
-            const MAX_WIDTH = 800;
-            const MAX_HEIGHT = 600;
-
-            if (width > height) {
-              if (width > MAX_WIDTH) {
-                height = Math.round(height * (MAX_WIDTH / width));
-                width = MAX_WIDTH;
-              }
-            } else {
-              if (height > MAX_HEIGHT) {
-                width = Math.round(width * (MAX_HEIGHT / height));
-                height = MAX_HEIGHT;
-              }
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.fillStyle = '#FFFFFF';
-              ctx.fillRect(0, 0, width, height);
-              ctx.drawImage(img, 0, 0, width, height);
-              const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
-              if (objectUrl) URL.revokeObjectURL(objectUrl);
-              addAttachment(file.name, 'image/jpeg', dataUrl);
-            } else {
-              if (objectUrl) URL.revokeObjectURL(objectUrl);
-              readTestCaseFileFallback(file);
-            }
-          } catch (err) {
-            console.error("Test Case image compression error:", err);
-            if (objectUrl) URL.revokeObjectURL(objectUrl);
-            readTestCaseFileFallback(file);
+      if (file.type.startsWith('image/') || /\.(png|jpg|jpeg|gif|webp|bmp|svg)$/i.test(file.name)) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const rawResult = reader.result as string;
+          const imageMime = file.type || (/\.png$/i.test(file.name) ? 'image/png' : 'image/jpeg');
+          if (file.size <= 800 * 1024) {
+            addAttachment(file.name, imageMime, rawResult);
+            return;
           }
-        };
 
-        img.onerror = () => {
-          if (objectUrl) URL.revokeObjectURL(objectUrl);
-          readTestCaseFileFallback(file);
-        };
+          // Compress large images using canvas
+          const img = new Image();
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              let width = img.width;
+              let height = img.height;
+              const MAX = 1200;
 
-        img.src = objectUrl;
+              if (width > MAX || height > MAX) {
+                if (width > height) {
+                  height = Math.round((height * MAX) / width);
+                  width = MAX;
+                } else {
+                  width = Math.round((width * MAX) / height);
+                  height = MAX;
+                }
+              }
+
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              if (ctx) {
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, width, height);
+                ctx.drawImage(img, 0, 0, width, height);
+                const compressedUrl = canvas.toDataURL('image/jpeg', 0.7);
+                addAttachment(file.name, imageMime, compressedUrl);
+              } else {
+                addAttachment(file.name, imageMime, rawResult);
+              }
+            } catch (err) {
+              addAttachment(file.name, imageMime, rawResult);
+            }
+          };
+          img.onerror = () => {
+            addAttachment(file.name, imageMime, rawResult);
+          };
+          img.src = rawResult;
+        };
+        reader.onerror = () => {
+          addNotification('Upload Failed', `Could not read "${file.name}"`, 'error');
+        };
+        reader.readAsDataURL(file);
       } else {
-        readTestCaseFileFallback(file);
+        const reader = new FileReader();
+        reader.onload = () => {
+          const rawResult = reader.result as string;
+          let mimeType = file.type;
+          if (!mimeType) {
+            if (/\.(mp4|webm|ogg|mov|m4v|mkv)$/i.test(file.name)) {
+              mimeType = 'video/mp4';
+            } else if (/\.pdf$/i.test(file.name)) {
+              mimeType = 'application/pdf';
+            } else if (/\.docx$/i.test(file.name)) {
+              mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+            } else if (/\.doc$/i.test(file.name)) {
+              mimeType = 'application/msword';
+            } else {
+              mimeType = 'application/octet-stream';
+            }
+          }
+          addAttachment(file.name, mimeType, rawResult);
+        };
+        reader.onerror = () => {
+          addNotification('Upload Failed', `Could not read "${file.name}"`, 'error');
+        };
+        reader.readAsDataURL(file);
       }
     });
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files) return;
-    processFiles(Array.from(e.target.files));
+    if (e.target.files && e.target.files.length > 0) {
+      processFiles(Array.from(e.target.files));
+    }
+    e.target.value = '';
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -208,13 +257,25 @@ export const TestCasesView: React.FC = () => {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    if (e.dataTransfer?.files) {
+    if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
       processFiles(Array.from(e.dataTransfer.files));
     }
   };
 
   const removeAttachment = (name: string) => {
     setExecutionAttachments(prev => prev.filter(att => att.name !== name));
+  };
+
+  // Helper to load an execution into the editing form fields
+  const loadExecutionIntoForm = (exec: TestExecution) => {
+    setExecStatus(exec.status || 'passed');
+    if (exec.executedById) {
+      setExecutedById(exec.executedById);
+    }
+    setActualResult(exec.actualResult || '');
+    setRunTimeMs(exec.runTimeMs !== null && exec.runTimeMs !== undefined ? exec.runTimeMs.toString() : '');
+    setExecNotes(exec.notes || '');
+    setExecutionAttachments(exec.attachments || []);
   };
 
   // Test Case Form State
@@ -251,7 +312,7 @@ export const TestCasesView: React.FC = () => {
   const activeTestCase = testCases.find(t => t.id === activeTestCaseId);
   const activeTestCaseExecutions = executions.filter(e => e.testCaseId === activeTestCaseId);
 
-  // Pre-fill execution QA assignee
+  // Pre-fill execution fields from existing executions when selecting a test case
   useEffect(() => {
     if (activeTestCaseId && activeTestCase) {
       if (activeTestCase.assignedQaId) {
@@ -261,8 +322,25 @@ export const TestCasesView: React.FC = () => {
       } else {
         setExecutedById('System Default QA');
       }
+
+      // Find latest execution for this test case to pre-fill Actual Result, Duration, Notes & Attachments
+      const tcExecs = executions.filter(e => e.testCaseId === activeTestCaseId);
+      if (tcExecs.length > 0) {
+        const latest = [...tcExecs].sort((a, b) => new Date(b.executionDate).getTime() - new Date(a.executionDate).getTime())[0];
+        setExecStatus(latest.status || 'passed');
+        setActualResult(latest.actualResult || '');
+        setRunTimeMs(latest.runTimeMs !== null && latest.runTimeMs !== undefined ? latest.runTimeMs.toString() : '');
+        setExecNotes(latest.notes || '');
+        setExecutionAttachments(latest.attachments || []);
+      } else {
+        setExecStatus('passed');
+        setActualResult('');
+        setRunTimeMs('');
+        setExecNotes('');
+        setExecutionAttachments([]);
+      }
     }
-  }, [activeTestCaseId, activeTestCase, qaEngineers]);
+  }, [activeTestCaseId]);
 
   // Sorting
   const handleSort = (field: 'title' | 'id' | 'priority') => {
@@ -1041,51 +1119,142 @@ export const TestCasesView: React.FC = () => {
                         No previous runs recorded.
                       </div>
                     ) : (
-                      <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1.5 custom-scrollbar">
+                      <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1.5 custom-scrollbar">
                         {activeTestCaseExecutions.map(exec => {
                           const qa = qaEngineers.find(q => q.id === exec.executedById);
                           return (
                             <div
                               key={exec.id}
-                              className="border border-slate-100 dark:border-slate-850 p-3 rounded-xl text-xs space-y-2 bg-slate-50/50 dark:bg-slate-950/20 shadow-xs"
+                              className="border border-slate-100 dark:border-slate-850 p-3 rounded-xl text-xs space-y-2 bg-slate-50/50 dark:bg-slate-950/20 shadow-xs hover:border-indigo-200 dark:hover:border-indigo-900/40 transition-colors"
                             >
-                              <div className="flex items-center justify-between">
-                                {getExecBadge(exec.status)}
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                  {getExecBadge(exec.status)}
+                                  <button
+                                    type="button"
+                                    onClick={() => loadExecutionIntoForm(exec)}
+                                    className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 font-bold rounded-md text-[10px] transition-colors cursor-pointer flex items-center gap-1 border border-indigo-200 dark:border-indigo-800/40"
+                                    title="Click to populate these execution details into editing form"
+                                  >
+                                    <Edit className="w-2.5 h-2.5" />
+                                    <span>Load / Edit</span>
+                                  </button>
+                                </div>
                                 <span className="text-[9px] text-slate-400 dark:text-slate-500 font-mono">
                                   {new Date(exec.executionDate).toLocaleDateString()} {new Date(exec.executionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                               </div>
-                              <p className="font-semibold text-slate-800 dark:text-slate-200 mt-1 leading-snug">
-                                {exec.actualResult}
-                              </p>
+                              <div className="space-y-0.5">
+                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Actual Result / Log:</span>
+                                <p className="font-semibold text-slate-800 dark:text-slate-200 leading-snug">
+                                  {exec.actualResult}
+                                </p>
+                              </div>
                               {exec.notes && (
-                                <p className="text-slate-500 dark:text-slate-400 italic">
+                                <p className="text-slate-500 dark:text-slate-400 italic text-[11px]">
                                   Notes: {exec.notes}
                                 </p>
                               )}
                               {exec.attachments && exec.attachments.length > 0 && (
-                                <div className="pt-1 space-y-1">
-                                  <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Evidence Files:</span>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {exec.attachments.map((att, aIdx) => (
-                                      <a
-                                        key={aIdx}
-                                        href={att.data}
-                                        download={att.name}
-                                        className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-150 dark:border-slate-800 rounded text-[9px] font-medium transition-colors"
-                                        title={`Click to download ${att.name}`}
-                                        onClick={(e) => e.stopPropagation()}
-                                      >
-                                        <Paperclip className="w-2.5 h-2.5 shrink-0 text-slate-400" />
-                                        <span className="truncate max-w-[120px]">{att.name}</span>
-                                      </a>
-                                    ))}
+                                <div className="pt-2 space-y-2 border-t border-slate-100 dark:border-slate-800/60 mt-2">
+                                  <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                                    Evidence Files ({exec.attachments.length}):
+                                  </span>
+                                  <div className="grid grid-cols-1 gap-2">
+                                    {exec.attachments.map((att, aIdx) => {
+                                      const isImg = isImageFile(att);
+                                      const isVid = isVideoFile(att);
+                                      const isPdf = isPdfFile(att);
+                                      const isDoc = isWordFile(att);
+                                      return (
+                                        <div
+                                          key={aIdx}
+                                          className="p-2 bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-xl text-xs space-y-1.5"
+                                        >
+                                          <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                              {isImg ? (
+                                                <img
+                                                  src={att.data}
+                                                  alt={att.name}
+                                                  onClick={() => setPreviewMedia({ name: att.name, url: att.data, type: 'image' })}
+                                                  className="w-7 h-7 object-cover rounded-lg border border-slate-200 dark:border-slate-700 shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                                                  title="Click to expand image"
+                                                />
+                                              ) : isVid ? (
+                                                <div
+                                                  onClick={() => setPreviewMedia({ name: att.name, url: att.data, type: 'video' })}
+                                                  className="w-7 h-7 rounded-lg bg-indigo-950 flex items-center justify-center shrink-0 cursor-pointer border border-indigo-800 text-indigo-400 hover:bg-indigo-900 transition-colors"
+                                                  title="Click to play video"
+                                                >
+                                                  <Video className="w-3.5 h-3.5" />
+                                                </div>
+                                              ) : isPdf ? (
+                                                <div className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 flex items-center justify-center shrink-0 text-rose-600 dark:text-rose-400">
+                                                  <FileText className="w-3.5 h-3.5" />
+                                                </div>
+                                              ) : isDoc ? (
+                                                <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-900 flex items-center justify-center shrink-0 text-blue-600 dark:text-blue-400">
+                                                  <FileText className="w-3.5 h-3.5" />
+                                                </div>
+                                              ) : (
+                                                <Paperclip className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                              )}
+                                              <span className="truncate text-[11px] font-medium text-slate-700 dark:text-slate-200">
+                                                {att.name}
+                                              </span>
+                                            </div>
+                                            <div className="flex items-center gap-1 shrink-0">
+                                              {(isImg || isVid) && (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => setPreviewMedia({ name: att.name, url: att.data, type: isVid ? 'video' : 'image' })}
+                                                  className="p-1 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                                                  title={isVid ? "Play Video" : "Preview Image"}
+                                                >
+                                                  {isVid ? <Video className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                                </button>
+                                              )}
+                                              <a
+                                                href={att.data}
+                                                download={att.name}
+                                                className="p-1 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                                title={`Download ${att.name}`}
+                                                onClick={(e) => e.stopPropagation()}
+                                              >
+                                                <Download className="w-3.5 h-3.5" />
+                                              </a>
+                                            </div>
+                                          </div>
+
+                                          {/* Inline video display */}
+                                          {isVid && (
+                                            <video
+                                              src={att.data}
+                                              controls
+                                              className="w-full max-h-40 rounded-lg bg-black object-contain border border-slate-800"
+                                            />
+                                          )}
+                                          {/* Inline image display */}
+                                          {isImg && (
+                                            <img
+                                              src={att.data}
+                                              alt={att.name}
+                                              onClick={() => setPreviewMedia({ name: att.name, url: att.data, type: 'image' })}
+                                              className="w-full max-h-36 object-contain rounded-lg bg-slate-950/20 border border-slate-800/20 cursor-pointer hover:opacity-90 transition-opacity"
+                                            />
+                                          )}
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               )}
                               <div className="flex justify-between items-center text-[10px] text-slate-400 dark:text-slate-500 pt-1.5 border-t border-slate-100/50 dark:border-slate-800/40 mt-1">
                                 <span>Runner: {qa?.name || exec.executedById}</span>
-                                {exec.runTimeMs !== null && <span>Took {exec.runTimeMs}ms</span>}
+                                {exec.runTimeMs !== null && exec.runTimeMs !== undefined && (
+                                  <span className="font-mono text-indigo-600 dark:text-indigo-400 font-medium">Duration: {exec.runTimeMs}ms</span>
+                                )}
                               </div>
                             </div>
                           );
@@ -1205,54 +1374,146 @@ export const TestCasesView: React.FC = () => {
                               ? 'border-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/20'
                               : 'border-slate-200 dark:border-slate-800 hover:border-indigo-500 dark:hover:border-indigo-500/50 bg-slate-50/30 dark:bg-slate-950/10'
                           }`}
-                          onClick={() => document.getElementById('exec-file-upload')?.click()}
+                          onClick={() => fileInputRef.current?.click()}
                         >
                           <input
-                            id="exec-file-upload"
+                            ref={fileInputRef}
                             type="file"
+                            accept="video/mp4,video/*,image/png,image/jpeg,image/*,application/pdf,.pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.json,.log,.txt"
                             multiple
                             className="hidden"
                             onChange={handleFileUpload}
                           />
-                          <UploadCloud className="w-6 h-6 text-slate-400 mx-auto mb-1.5" />
+                          <UploadCloud className="w-6 h-6 text-indigo-500 mx-auto mb-1.5" />
                           <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                             Drag & drop files here, or <span className="text-indigo-600 dark:text-indigo-400 font-bold underline">browse</span>
                           </p>
                           <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">
-                            Upload test execution screenshots, console logs, or payloads
+                            Accepts MP4 videos, PNG/JPEG screenshots, PDF reports, Word (.doc/.docx) files & logs
                           </p>
                         </div>
 
-                        {/* Render uploaded list */}
+                        {/* Render staged uploaded files list */}
                         {executionAttachments.length > 0 && (
-                          <div className="space-y-1.5 pt-1.5">
-                            <div className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                              Files Staged ({executionAttachments.length})
+                          <div className="space-y-2 pt-2">
+                            <div className="flex items-center justify-between">
+                              <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                Files Staged for Execution ({executionAttachments.length})
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setExecutionAttachments([])}
+                                className="text-[10px] text-slate-400 hover:text-rose-500 font-medium cursor-pointer"
+                              >
+                                Clear All
+                              </button>
                             </div>
-                            <div className="grid grid-cols-1 gap-1.5 max-h-24 overflow-y-auto">
-                              {executionAttachments.map((att, idx) => (
-                                <div
-                                  key={idx}
-                                  className="flex items-center justify-between p-2 bg-slate-100/50 dark:bg-slate-950/40 border border-slate-150 dark:border-slate-850/80 rounded-lg text-xs"
-                                >
-                                  <div className="flex items-center gap-2 min-w-0">
-                                    <Paperclip className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                                    <span className="truncate text-[11px] font-medium text-slate-800 dark:text-slate-200">
-                                      {att.name}
-                                    </span>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      removeAttachment(att.name);
-                                    }}
-                                    className="p-1 text-slate-400 hover:text-red-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors shrink-0 cursor-pointer"
+                            <div className="grid grid-cols-1 gap-2.5 max-h-56 overflow-y-auto pr-1">
+                              {executionAttachments.map((att, idx) => {
+                                const isImg = isImageFile(att);
+                                const isVid = isVideoFile(att);
+                                const isPdf = isPdfFile(att);
+                                const isDoc = isWordFile(att);
+                                return (
+                                  <div
+                                    key={idx}
+                                    className="p-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs space-y-2 shadow-2xs"
                                   >
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              ))}
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="flex items-center gap-2.5 min-w-0">
+                                        {isImg ? (
+                                          <img
+                                            src={att.data}
+                                            alt={att.name}
+                                            className="w-8 h-8 object-cover rounded-lg border border-slate-200 dark:border-slate-700 shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                                            onClick={() => setPreviewMedia({ name: att.name, url: att.data, type: 'image' })}
+                                            title="Click to preview image"
+                                          />
+                                        ) : isVid ? (
+                                          <div
+                                            onClick={() => setPreviewMedia({ name: att.name, url: att.data, type: 'video' })}
+                                            className="w-8 h-8 rounded-lg bg-indigo-950 flex items-center justify-center shrink-0 cursor-pointer border border-indigo-800 text-indigo-400 hover:bg-indigo-900 transition-colors"
+                                            title="Click to play video"
+                                          >
+                                            <Video className="w-4 h-4" />
+                                          </div>
+                                        ) : isPdf ? (
+                                          <div className="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 flex items-center justify-center shrink-0 text-rose-600 dark:text-rose-400">
+                                            <FileText className="w-4 h-4" />
+                                          </div>
+                                        ) : isDoc ? (
+                                          <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-900 flex items-center justify-center shrink-0 text-blue-600 dark:text-blue-400">
+                                            <FileText className="w-4 h-4" />
+                                          </div>
+                                        ) : (
+                                          <div className="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                                            <Paperclip className="w-4 h-4 text-slate-500" />
+                                          </div>
+                                        )}
+                                        <div className="min-w-0">
+                                          <p className="truncate text-xs font-semibold text-slate-800 dark:text-slate-200">
+                                            {att.name}
+                                          </p>
+                                          <p className="text-[9px] text-slate-400 uppercase font-mono font-bold">
+                                            {isVid ? 'MP4 VIDEO' : isImg ? 'PNG / JPEG IMAGE' : isPdf ? 'PDF DOCUMENT' : isDoc ? 'WORD DOCUMENT' : (att.type.split('/')[1] || 'FILE')}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-1 shrink-0">
+                                        {(isImg || isVid) && (
+                                          <button
+                                            type="button"
+                                            onClick={() => setPreviewMedia({ name: att.name, url: att.data, type: isVid ? 'video' : 'image' })}
+                                            className="p-1 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 cursor-pointer"
+                                            title={isVid ? "Play Video" : "Preview Image"}
+                                          >
+                                            {isVid ? <Video className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                          </button>
+                                        )}
+                                        {(isPdf || isDoc || (!isImg && !isVid)) && (
+                                          <a
+                                            href={att.data}
+                                            download={att.name}
+                                            className="p-1 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
+                                            title={`Download ${att.name}`}
+                                          >
+                                            <Download className="w-3.5 h-3.5" />
+                                          </a>
+                                        )}
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            removeAttachment(att.name);
+                                          }}
+                                          className="p-1 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                                          title="Remove file"
+                                        >
+                                          <X className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    </div>
+
+                                    {/* Inline video display for staged attachments */}
+                                    {isVid && (
+                                      <video
+                                        src={att.data}
+                                        controls
+                                        className="w-full max-h-40 rounded-lg object-contain bg-black border border-slate-800"
+                                      />
+                                    )}
+                                    {/* Inline image display for staged attachments */}
+                                    {isImg && (
+                                      <img
+                                        src={att.data}
+                                        alt={att.name}
+                                        onClick={() => setPreviewMedia({ name: att.name, url: att.data, type: 'image' })}
+                                        className="w-full max-h-36 rounded-lg object-contain bg-slate-950/20 border border-slate-800/20 cursor-pointer hover:opacity-90 transition-opacity"
+                                      />
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         )}
@@ -1899,28 +2160,100 @@ export const TestCasesView: React.FC = () => {
                             </p>
                           )}
                           {exec.attachments && exec.attachments.length > 0 && (
-                            <div className="pt-1">
-                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Attached Evidence:</span>
-                              <div className="flex flex-wrap gap-1.5">
-                                {exec.attachments.map((att, aIdx) => (
-                                  <a
-                                    key={aIdx}
-                                    href={att.data}
-                                    download={att.name}
-                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-150 dark:border-slate-800 rounded text-[9px] font-medium transition-colors"
-                                    title={`Download ${att.name}`}
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <Paperclip className="w-2.5 h-2.5 shrink-0 text-slate-400" />
-                                    <span className="truncate max-w-[120px]">{att.name}</span>
-                                  </a>
-                                ))}
+                            <div className="pt-2 space-y-1.5 border-t border-slate-100 dark:border-slate-800/60 mt-1">
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                                Attached Evidence ({exec.attachments.length}):
+                              </span>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {exec.attachments.map((att, aIdx) => {
+                                  const isImg = isImageFile(att);
+                                  const isVid = isVideoFile(att);
+                                  const isPdf = isPdfFile(att);
+                                  const isDoc = isWordFile(att);
+                                  return (
+                                    <div
+                                      key={aIdx}
+                                      className="p-2 bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-xl text-xs space-y-1.5"
+                                    >
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          {isImg ? (
+                                            <img
+                                              src={att.data}
+                                              alt={att.name}
+                                              onClick={() => setPreviewMedia({ name: att.name, url: att.data, type: 'image' })}
+                                              className="w-7 h-7 object-cover rounded-lg border border-slate-200 dark:border-slate-700 shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                                              title="Click to expand image"
+                                            />
+                                          ) : isVid ? (
+                                            <div
+                                              onClick={() => setPreviewMedia({ name: att.name, url: att.data, type: 'video' })}
+                                              className="w-7 h-7 rounded-lg bg-indigo-950 flex items-center justify-center shrink-0 cursor-pointer border border-indigo-800 text-indigo-400 hover:bg-indigo-900 transition-colors"
+                                              title="Click to play video"
+                                            >
+                                              <Video className="w-3.5 h-3.5" />
+                                            </div>
+                                          ) : isPdf ? (
+                                            <div className="w-7 h-7 rounded-lg bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900 flex items-center justify-center shrink-0 text-rose-600 dark:text-rose-400">
+                                              <FileText className="w-3.5 h-3.5" />
+                                            </div>
+                                          ) : isDoc ? (
+                                            <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-900 flex items-center justify-center shrink-0 text-blue-600 dark:text-blue-400">
+                                              <FileText className="w-3.5 h-3.5" />
+                                            </div>
+                                          ) : (
+                                            <Paperclip className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                          )}
+                                          <span className="truncate text-[11px] font-medium text-slate-700 dark:text-slate-200">
+                                            {att.name}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                          {(isImg || isVid) && (
+                                            <button
+                                              type="button"
+                                              onClick={() => setPreviewMedia({ name: att.name, url: att.data, type: isVid ? 'video' : 'image' })}
+                                              className="p-1 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                                              title={isVid ? "Play Video" : "Preview Image"}
+                                            >
+                                              {isVid ? <Video className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                            </button>
+                                          )}
+                                          <a
+                                            href={att.data}
+                                            download={att.name}
+                                            className="p-1 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                            title={`Download ${att.name}`}
+                                            onClick={(e) => e.stopPropagation()}
+                                          >
+                                            <Download className="w-3.5 h-3.5" />
+                                          </a>
+                                        </div>
+                                      </div>
+                                      {isVid && (
+                                        <video
+                                          src={att.data}
+                                          controls
+                                          className="w-full max-h-36 rounded-lg bg-black object-contain border border-slate-800"
+                                        />
+                                      )}
+                                      {isImg && (
+                                        <img
+                                          src={att.data}
+                                          alt={att.name}
+                                          onClick={() => setPreviewMedia({ name: att.name, url: att.data, type: 'image' })}
+                                          className="w-full max-h-32 object-contain rounded-lg bg-slate-950/20 border border-slate-800/20 cursor-pointer hover:opacity-90 transition-opacity"
+                                        />
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}
                           <div className="flex justify-between items-center text-[10px] text-slate-400 dark:text-slate-500 pt-1.5 border-t border-slate-100/40 dark:border-slate-800/40 mt-1">
                             <span>Runner: {qa?.name || exec.executedById}</span>
-                            {exec.runTimeMs !== null && <span>Duration: {exec.runTimeMs}ms</span>}
+                            {exec.runTimeMs !== null && exec.runTimeMs !== undefined && <span>Duration: {exec.runTimeMs}ms</span>}
                           </div>
                         </div>
                       );
@@ -1960,6 +2293,60 @@ export const TestCasesView: React.FC = () => {
         title="Bulk Delete Test Cases?"
         message={`Are you sure you want to delete ${selectedIds.length} selected cases? Historical execution safeguards will still be evaluated.`}
       />
+
+      {/* MEDIA PREVIEW LIGHTBOX MODAL (IMAGES & VIDEOS) */}
+      {previewMedia && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div onClick={() => setPreviewMedia(null)} className="fixed inset-0 bg-slate-950/75 backdrop-blur-xs" />
+          <div className="relative z-10 max-w-4xl w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-2xl flex flex-col space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 min-w-0 pr-2">
+                {previewMedia.type === 'video' ? (
+                  <Video className="w-4 h-4 text-indigo-500 shrink-0" />
+                ) : (
+                  <Eye className="w-4 h-4 text-indigo-500 shrink-0" />
+                )}
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                  {previewMedia.name}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <a
+                  href={previewMedia.url}
+                  download={previewMedia.name}
+                  className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 rounded-lg cursor-pointer"
+                  title="Download File"
+                >
+                  <Download className="w-4 h-4" />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreviewMedia(null)}
+                  className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 rounded-lg cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center justify-center bg-slate-950 rounded-xl p-2 max-h-[75vh] overflow-hidden">
+              {previewMedia.type === 'video' ? (
+                <video
+                  src={previewMedia.url}
+                  controls
+                  autoPlay
+                  className="max-h-[70vh] w-auto max-w-full rounded-lg"
+                />
+              ) : (
+                <img
+                  src={previewMedia.url}
+                  alt={previewMedia.name}
+                  className="max-h-[70vh] w-auto max-w-full object-contain rounded-lg"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
