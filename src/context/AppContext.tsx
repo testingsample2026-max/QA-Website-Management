@@ -85,6 +85,7 @@ interface AppContextType {
   duplicateTestCase: (id: string) => { success: boolean; error?: string };
 
   addTestExecution: (data: Omit<TestExecution, 'id' | 'executionDate'>) => { success: boolean; error?: string; id?: string };
+  deleteTestExecution: (id: string) => { success: boolean; error?: string };
 
   addBug: (data: Omit<Bug, 'id' | 'createdAt' | 'updatedAt'>) => { success: boolean; error?: string; id?: string };
   updateBug: (id: string, data: Partial<Bug>) => { success: boolean; error?: string };
@@ -783,6 +784,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { success: true, id };
   }, [testCases, executions, generateId, logActivity, addNotification]);
 
+  const deleteTestExecution = useCallback((id: string) => {
+    const exec = executions.find(e => e.id === id);
+    if (!exec) return { success: false, error: 'Execution log not found' };
+
+    setExecutions(prev => prev.filter(e => e.id !== id));
+    deleteDocFromFirestore('executions', id).catch(err => console.error(err));
+
+    // Recalculate test case's lastExecutionStatus from remaining executions
+    const remainingExecs = executions.filter(e => e.testCaseId === exec.testCaseId && e.id !== id);
+    let newStatus: TestCase['lastExecutionStatus'] = 'unexecuted';
+    if (remainingExecs.length > 0) {
+      const sorted = [...remainingExecs].sort((a, b) => new Date(b.executionDate).getTime() - new Date(a.executionDate).getTime());
+      newStatus = sorted[0].status;
+    }
+    setTestCases(prev => prev.map(t => {
+      if (t.id === exec.testCaseId) {
+        const updatedTC = { ...t, lastExecutionStatus: newStatus };
+        saveDocToFirestore('testCases', t.id, updatedTC).catch(err => console.error(err));
+        return updatedTC;
+      }
+      return t;
+    }));
+
+    logActivity('DELETE', 'TestExecution', id, exec.id, `Deleted execution log #${id}`);
+    addNotification("Execution Deleted", `Execution record ${id} removed.`, 'warning');
+    return { success: true };
+  }, [executions, testCases, logActivity, addNotification]);
+
 
   // --- BUG TRACKER CRUD ---
   const addBug = useCallback((data: Omit<Bug, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -1275,6 +1304,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       duplicateTestCase,
 
       addTestExecution,
+      deleteTestExecution,
 
       addBug,
       updateBug,

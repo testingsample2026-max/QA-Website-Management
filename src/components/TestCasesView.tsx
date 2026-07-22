@@ -89,6 +89,7 @@ export const TestCasesView: React.FC = () => {
     restoreTestCase,
     duplicateTestCase,
     addTestExecution,
+    deleteTestExecution,
     bulkUpdate,
     bulkDelete,
     addNotification,
@@ -137,6 +138,7 @@ export const TestCasesView: React.FC = () => {
   const [executionAttachments, setExecutionAttachments] = useState<{ name: string; type: string; data: string }[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [previewMedia, setPreviewMedia] = useState<{ name: string; url: string; type: 'image' | 'video' } | null>(null);
+  const [deletingExecId, setDeletingExecId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addAttachment = (name: string, type: string, data: string) => {
@@ -1105,9 +1107,11 @@ export const TestCasesView: React.FC = () => {
 
                   {/* Historical Execution History logs */}
                   <div className="border-t border-slate-100 dark:border-slate-800 pt-5">
-                    <h4 className="text-[11px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                      <History className="w-3.5 h-3.5 text-indigo-500" />
-                      <span>Historical Logs ({activeTestCaseExecutions.length})</span>
+                    <h4 className="text-[11px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <History className="w-3.5 h-3.5 text-indigo-500" />
+                        <span>Historical Logs ({activeTestCaseExecutions.length})</span>
+                      </div>
                     </h4>
 
                     {activeTestCaseExecutions.length === 0 ? (
@@ -1115,7 +1119,7 @@ export const TestCasesView: React.FC = () => {
                         No previous runs recorded.
                       </div>
                     ) : (
-                      <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1.5 custom-scrollbar">
+                      <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1.5 custom-scrollbar">
                         {activeTestCaseExecutions.map(exec => {
                           const qa = qaEngineers.find(q => q.id === exec.executedById);
                           return (
@@ -1123,31 +1127,66 @@ export const TestCasesView: React.FC = () => {
                               key={exec.id}
                               className="border border-slate-100 dark:border-slate-850 p-3 rounded-xl text-xs space-y-2 bg-slate-50/50 dark:bg-slate-950/20 shadow-xs hover:border-indigo-200 dark:hover:border-indigo-900/40 transition-colors"
                             >
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-2">
-                                  {getExecBadge(exec.status)}
-                                  <button
-                                    type="button"
-                                    onClick={() => loadExecutionIntoForm(exec)}
-                                    className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 font-bold rounded-md text-[10px] transition-colors cursor-pointer flex items-center gap-1 border border-indigo-200 dark:border-indigo-800/40"
-                                    title="Click to populate these execution details into editing form"
-                                  >
-                                    <Edit className="w-2.5 h-2.5" />
-                                    <span>Load / Edit</span>
-                                  </button>
+                                <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800/80">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    {getExecBadge(exec.status)}
+                                    <span className="text-[9px] text-slate-400 dark:text-slate-500 font-mono truncate">
+                                      {new Date(exec.executionDate).toLocaleDateString()} {new Date(exec.executionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    {deletingExecId === exec.id ? (
+                                      <div className="flex items-center gap-1 bg-rose-50 dark:bg-rose-950/80 px-2 py-0.5 rounded-lg border border-rose-200 dark:border-rose-900">
+                                        <span className="text-[10px] text-rose-600 dark:text-rose-400 font-bold">Delete?</span>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            deleteTestExecution(exec.id);
+                                            setDeletingExecId(null);
+                                          }}
+                                          className="px-1.5 py-0.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-[10px] rounded cursor-pointer shadow-2xs transition-colors"
+                                        >
+                                          Yes
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => setDeletingExecId(null)}
+                                          className="px-1.5 py-0.5 text-slate-600 dark:text-slate-300 hover:bg-rose-100 dark:hover:bg-rose-900/50 font-medium text-[10px] rounded cursor-pointer transition-colors"
+                                        >
+                                          No
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={() => loadExecutionIntoForm(exec)}
+                                          className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 font-bold rounded-md text-[10px] transition-colors cursor-pointer flex items-center gap-1 border border-indigo-200 dark:border-indigo-800/40"
+                                          title="Click to populate these execution details into editing form"
+                                        >
+                                          <Edit className="w-2.5 h-2.5" />
+                                          <span>Load / Edit</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => setDeletingExecId(exec.id)}
+                                          className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-slate-200 dark:border-slate-800 hover:border-rose-200 dark:hover:border-rose-900 transition-colors cursor-pointer"
+                                          title="Delete this execution log"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
                                 </div>
-                                <span className="text-[9px] text-slate-400 dark:text-slate-500 font-mono">
-                                  {new Date(exec.executionDate).toLocaleDateString()} {new Date(exec.executionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                              </div>
                               <div className="space-y-0.5">
                                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Actual Result / Log:</span>
-                                <p className="font-semibold text-slate-800 dark:text-slate-200 leading-snug">
+                                <p className="font-semibold text-slate-800 dark:text-slate-200 leading-snug whitespace-pre-wrap font-mono text-[11px]">
                                   {exec.actualResult}
                                 </p>
                               </div>
                               {exec.notes && (
-                                <p className="text-slate-500 dark:text-slate-400 italic text-[11px]">
+                                <p className="text-slate-500 dark:text-slate-400 italic text-[11px] whitespace-pre-wrap">
                                   Notes: {exec.notes}
                                 </p>
                               )}
@@ -2149,18 +2188,53 @@ export const TestCasesView: React.FC = () => {
                           key={exec.id}
                           className="border border-slate-100 dark:border-slate-800 p-3 rounded-xl text-xs space-y-1.5 bg-slate-50/50 dark:bg-slate-950/20"
                         >
-                          <div className="flex items-center justify-between">
-                            <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
-                              exec.status === 'passed' ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400' :
-                              exec.status === 'failed' ? 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400' :
-                              exec.status === 'blocked' ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-700' :
-                              'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700'
-                            }`}>
-                              {exec.status}
-                            </span>
-                            <span className="text-[9px] text-slate-400 dark:text-slate-500 font-mono">
-                              {new Date(exec.executionDate).toLocaleDateString()} {new Date(exec.executionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
+                          <div className="flex items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800/80">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase ${
+                                exec.status === 'passed' ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400' :
+                                exec.status === 'failed' ? 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400' :
+                                exec.status === 'blocked' ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-700' :
+                                'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700'
+                              }`}>
+                                {exec.status}
+                              </span>
+                              <span className="text-[9px] text-slate-400 dark:text-slate-500 font-mono truncate">
+                                {new Date(exec.executionDate).toLocaleDateString()} {new Date(exec.executionDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {deletingExecId === exec.id ? (
+                                <div className="flex items-center gap-1 bg-rose-50 dark:bg-rose-950/80 px-2 py-0.5 rounded-lg border border-rose-200 dark:border-rose-900">
+                                  <span className="text-[10px] text-rose-600 dark:text-rose-400 font-bold">Delete?</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      deleteTestExecution(exec.id);
+                                      setDeletingExecId(null);
+                                    }}
+                                    className="px-1.5 py-0.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-[10px] rounded cursor-pointer shadow-2xs transition-colors"
+                                  >
+                                    Yes
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setDeletingExecId(null)}
+                                    className="px-1.5 py-0.5 text-slate-600 dark:text-slate-300 hover:bg-rose-100 dark:hover:bg-rose-900/50 font-medium text-[10px] rounded cursor-pointer transition-colors"
+                                  >
+                                    No
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setDeletingExecId(exec.id)}
+                                  className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-md hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-slate-200 dark:border-slate-800 hover:border-rose-200 dark:hover:border-rose-900 transition-colors cursor-pointer"
+                                  title="Delete this execution log"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
                           </div>
                           <p className="font-semibold text-slate-800 dark:text-slate-200 leading-snug">
                             {exec.actualResult}
