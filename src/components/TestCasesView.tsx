@@ -1363,7 +1363,6 @@ export const TestCasesView: React.FC = () => {
                           placeholder="e.g., Returns expected API payload with 200 OK"
                           value={actualResult}
                           onChange={(e) => setActualResult(e.target.value)}
-                          maxLength={2000}
                           className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-xs rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-hidden transition-all shadow-xs resize-y font-mono"
                           required
                         />
@@ -1389,7 +1388,6 @@ export const TestCasesView: React.FC = () => {
                             placeholder="Optional remarks..."
                             value={execNotes}
                             onChange={(e) => setExecNotes(e.target.value)}
-                            maxLength={2000}
                             className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-xs rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-hidden transition-all shadow-xs resize-y font-mono"
                           />
                         </div>
@@ -1711,7 +1709,6 @@ export const TestCasesView: React.FC = () => {
                   placeholder="e.g., Valid user account exists, and phone number is verified"
                   value={preconditions}
                   onChange={(e) => setPreconditions(e.target.value)}
-                  maxLength={150}
                   className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-250 text-xs rounded-xl focus:outline-hidden"
                 />
               </div>
@@ -1893,7 +1890,6 @@ export const TestCasesView: React.FC = () => {
                   placeholder="e.g., Valid user account exists, and phone number is verified"
                   value={preconditions}
                   onChange={(e) => setPreconditions(e.target.value)}
-                  maxLength={150}
                   className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-250 text-xs rounded-xl focus:outline-hidden"
                 />
               </div>
