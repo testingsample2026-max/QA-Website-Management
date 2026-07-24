@@ -430,87 +430,98 @@ export const ReleasesView: React.FC = () => {
       {isCreateOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div onClick={() => setIsCreateOpen(false)} className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs" />
-          <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden z-10 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <GitPullRequest className="w-4 h-4 text-indigo-500" />
-                <span>Plan Release Scope</span>
-              </h3>
-              <button onClick={() => setIsCreateOpen(false)} className="p-1 hover:bg-slate-100 text-slate-400 rounded-lg">
-                <X className="w-4 h-4" />
+          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden z-10 p-6 md:p-8">
+            <div className="flex items-center justify-between mb-5 pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                  <GitPullRequest className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-wide flex items-center gap-2">
+                    <span>Plan Release Scope</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Define target version, project assignment, schedule date, and scope changelog details
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setIsCreateOpen(false)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 rounded-xl transition-colors cursor-pointer">
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleCreateSubmit} className="space-y-4">
               {formError && (
-                <div className="p-3 bg-red-50 text-red-600 border border-red-100 text-xs font-semibold rounded-lg">
+                <div className="p-3 bg-red-50 text-red-600 border border-red-100 text-xs font-semibold rounded-xl">
                   {formError}
                 </div>
               )}
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase">Version Tag <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  placeholder="e.g., v1.10.3-rc2"
-                  value={version}
-                  onChange={(e) => setVersion(e.target.value)}
-                  maxLength={20}
-                  className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden"
-                  required
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Version Tag <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    placeholder="e.g., v1.10.3-rc2"
+                    value={version}
+                    onChange={(e) => setVersion(e.target.value)}
+                    maxLength={20}
+                    className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Target Project <span className="text-red-500">*</span></label>
+                  <select
+                    value={projectId}
+                    onChange={(e) => setProjectId(e.target.value)}
+                    className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-200 text-sm font-medium rounded-xl focus:outline-hidden cursor-pointer"
+                    required
+                  >
+                    <option value="" disabled>-- Target Project --</option>
+                    {projects.map(p => (
+                      <option key={p.id} value={p.id}>{p.id} - {p.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase">Target Project <span className="text-red-500">*</span></label>
-                <select
-                  value={projectId}
-                  onChange={(e) => setProjectId(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-250 text-xs font-semibold rounded-xl focus:outline-hidden cursor-pointer"
-                  required
-                >
-                  <option value="" disabled>-- Project --</option>
-                  {projects.map(p => (
-                    <option key={p.id} value={p.id}>{p.id} - {p.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase">Release Target Date <span className="text-red-500">*</span></label>
+                <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Release Target Date <span className="text-red-500">*</span></label>
                 <input
                   type="date"
                   value={releaseDate}
                   onChange={(e) => setReleaseDate(e.target.value)}
-                  className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-855 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden cursor-pointer"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden cursor-pointer"
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase">Release changelog / details</label>
+                <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Release Changelog / Scope Details</label>
                 <textarea
                   placeholder="e.g., Includes critical multi-factor auth features, security hardening patches..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  rows={3}
-                  className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden"
+                  rows={4}
+                  className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-3">
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setIsCreateOpen(false)}
-                  className="px-4 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-350 text-xs font-semibold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-850"
+                  className="px-5 py-2.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-850 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-sm cursor-pointer"
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-sm cursor-pointer transition-colors"
                 >
-                  Schedule
+                  Schedule Release
                 </button>
               </div>
             </form>
@@ -522,44 +533,54 @@ export const ReleasesView: React.FC = () => {
       {isEditOpen && selectedRelease && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div onClick={() => { setIsEditOpen(false); setSelectedRelease(null); }} className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs" />
-          <div className="relative w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden z-10 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <Edit className="w-4 h-4 text-indigo-500" />
-                <span>Edit Release Scope {selectedRelease.id}</span>
-              </h3>
-              <button onClick={() => { setIsEditOpen(false); setSelectedRelease(null); }} className="p-1 hover:bg-slate-100 text-slate-400 rounded-lg">
-                <X className="w-4 h-4" />
+          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden z-10 p-6 md:p-8">
+            <div className="flex items-center justify-between mb-5 pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                  <Edit className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-wide flex items-center gap-2">
+                    <span>Edit Release Scope</span>
+                    <span className="font-mono text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">{selectedRelease.id}</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Modify release schedule date, status lifecycle, and changelog scope
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => { setIsEditOpen(false); setSelectedRelease(null); }} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 rounded-xl transition-colors cursor-pointer">
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleEditSubmit} className="space-y-4">
               {formError && (
-                <div className="p-3 bg-red-50 text-red-600 border border-red-100 text-xs font-semibold rounded-lg">
+                <div className="p-3 bg-red-50 text-red-600 border border-red-100 text-xs font-semibold rounded-xl">
                   {formError}
                 </div>
               )}
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase">Version Tag <span className="text-red-500">*</span></label>
+                <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Version Tag <span className="text-red-500">*</span></label>
                 <input
                   type="text"
                   placeholder="e.g., v1.10.3-rc2"
                   value={version}
                   onChange={(e) => setVersion(e.target.value)}
                   maxLength={20}
-                  className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
                   required
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Scope Project</label>
+                  <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Scope Project</label>
                   <select
                     value={projectId}
                     onChange={(e) => setProjectId(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-250 text-xs font-semibold rounded-xl focus:outline-hidden"
+                    className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-200 text-sm font-medium rounded-xl focus:outline-hidden"
                     required
                   >
                     {projects.map(p => (
@@ -569,11 +590,11 @@ export const ReleasesView: React.FC = () => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Build Status</label>
+                  <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Build Status</label>
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value as Release['status'])}
-                    className="w-full px-3 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-250 text-xs font-semibold rounded-xl focus:outline-hidden cursor-pointer"
+                    className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-200 text-sm font-medium rounded-xl focus:outline-hidden cursor-pointer"
                   >
                     <option value="draft">Draft</option>
                     <option value="beta">Beta Build</option>
@@ -584,38 +605,38 @@ export const ReleasesView: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase">Release Target Date <span className="text-red-500">*</span></label>
+                <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Release Target Date <span className="text-red-500">*</span></label>
                 <input
                   type="date"
                   value={releaseDate}
                   onChange={(e) => setReleaseDate(e.target.value)}
-                  className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-855 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden cursor-pointer"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden cursor-pointer"
                   required
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase">Release changelog / details</label>
+                <label className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Release Changelog / Details</label>
                 <textarea
                   placeholder="Details..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  rows={3}
-                  className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-250 text-sm rounded-xl focus:outline-hidden"
+                  rows={4}
+                  className="w-full px-3.5 py-2.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-850 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden"
                 />
               </div>
 
-              <div className="flex justify-end gap-3 pt-3">
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => { setIsEditOpen(false); setSelectedRelease(null); }}
-                  className="px-4 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-350 text-xs font-semibold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-850"
+                  className="px-5 py-2.5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl hover:bg-slate-50 dark:hover:bg-slate-850 transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-sm cursor-pointer"
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-sm cursor-pointer transition-colors"
                 >
                   Save Changes
                 </button>
@@ -629,7 +650,7 @@ export const ReleasesView: React.FC = () => {
       {viewRelease && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div onClick={() => setViewRelease(null)} className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs" />
-          <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden z-10 p-6 animate-fade-in max-h-[90vh] flex flex-col">
+          <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden z-10 p-6 md:p-8 animate-fade-in max-h-[90vh] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2.5">

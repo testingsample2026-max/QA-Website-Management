@@ -144,7 +144,7 @@ export const exportTestExecutionsToCSV = (executions: TestExecution[]) => {
 export const exportBugsToCSV = (bugs: Bug[]) => {
   const headers = [
     'ID', 'Project ID', 'Module ID', 'Test Case ID', 'Execution ID', 'Title', 
-    'Description', 'Severity', 'Priority', 'Status', 'Assigned Dev ID', 
+    'Description', 'Actual Result', 'Expected Result', 'Severity', 'Priority', 'Status', 'Assigned Dev ID', 
     'Reporter QA ID', 'Created At', 'Updated At'
   ];
   const rows = bugs.map(b => [
@@ -155,6 +155,8 @@ export const exportBugsToCSV = (bugs: Bug[]) => {
     b.executionId || '',
     b.title,
     b.description,
+    b.actualResult || '',
+    b.expectedResult || '',
     b.severity,
     b.priority,
     b.status,

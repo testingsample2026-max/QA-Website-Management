@@ -417,6 +417,8 @@ export const BugsView: React.FC = () => {
                 setFormError('');
                 setTitle('');
                 setDescription('');
+                setExpectedResult('');
+                setActualResult('');
                 setProjectId(projects[0]?.id || '');
                 const firstMod = modules.find(m => m.projectId === projects[0]?.id);
                 setModuleId(firstMod?.id || '');
@@ -513,6 +515,8 @@ export const BugsView: React.FC = () => {
                   setFormError('');
                   setTitle('');
                   setDescription('');
+                  setExpectedResult('');
+                  setActualResult('');
                   setProjectId(projects[0]?.id || '');
                   const firstMod = modules.find(m => m.projectId === projects[0]?.id);
                   setModuleId(firstMod?.id || '');
@@ -596,6 +600,20 @@ export const BugsView: React.FC = () => {
                             )}
                             <span className="truncate max-w-[200px]">{b.description}</span>
                           </span>
+                          {(b.actualResult || b.expectedResult) && (
+                            <div className="flex flex-wrap items-center gap-1.5 mt-1.5 text-[10px] font-sans">
+                              {b.actualResult && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-50 dark:bg-red-950/40 border border-red-200/60 dark:border-red-800/40 text-red-700 dark:text-red-400 max-w-[180px] truncate" title={`Actual Result: ${b.actualResult}`}>
+                                  <strong className="font-bold shrink-0">Actual:</strong> <span className="truncate">{b.actualResult}</span>
+                                </span>
+                              )}
+                              {b.expectedResult && (
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/40 text-emerald-700 dark:text-emerald-400 max-w-[180px] truncate" title={`Expected Result: ${b.expectedResult}`}>
+                                  <strong className="font-bold shrink-0">Expected:</strong> <span className="truncate">{b.expectedResult}</span>
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="p-4">
