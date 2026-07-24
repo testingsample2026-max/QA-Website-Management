@@ -73,6 +73,8 @@ export interface Bug {
   executionId: string | null;
   title: string;
   description: string;
+  expectedResult?: string;
+  actualResult?: string;
   severity: 'low' | 'medium' | 'high' | 'critical';
   priority: 'low' | 'medium' | 'high' | 'immediate';
   status: 'new' | 'assigned' | 'open' | 'fixed' | 'retesting' | 'closed' | 'rejected';

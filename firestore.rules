@@ -91,11 +91,8 @@ service cloud.firestore {
 
     function isValidBug(data) {
       return data.keys().hasAll(['id', 'projectId', 'moduleId', 'title', 'description', 'severity', 'priority', 'status', 'createdAt', 'updatedAt'])
-        && (data.keys().size() == 10 
-            || (data.keys().size() == 11 && data.keys().hasAny(['testCaseId', 'executionId', 'assignedDevId', 'reporterQaId']))
-            || (data.keys().size() == 12 && data.keys().hasAny(['testCaseId', 'executionId', 'assignedDevId', 'reporterQaId']))
-            || (data.keys().size() == 13 && data.keys().hasAny(['testCaseId', 'executionId', 'assignedDevId', 'reporterQaId']))
-            || (data.keys().size() == 14 && data.keys().hasAll(['testCaseId', 'executionId', 'assignedDevId', 'reporterQaId'])))
+        && (!data.keys().hasAny(['expectedResult']) || data.expectedResult is string)
+        && (!data.keys().hasAny(['actualResult']) || data.actualResult is string)
         && isValidId(data.id)
         && isValidId(data.projectId)
         && isValidId(data.moduleId)

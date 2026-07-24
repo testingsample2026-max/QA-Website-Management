@@ -80,6 +80,8 @@ export const BugsView: React.FC = () => {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [expectedResult, setExpectedResult] = useState('');
+  const [actualResult, setActualResult] = useState('');
   const [projectId, setProjectId] = useState('');
   const [moduleId, setModuleId] = useState('');
   const [testCaseId, setTestCaseId] = useState('');
@@ -137,6 +139,8 @@ export const BugsView: React.FC = () => {
       executionId: null,
       title: title.trim(),
       description: description.trim(),
+      expectedResult: expectedResult.trim(),
+      actualResult: actualResult.trim(),
       severity,
       priority,
       status: 'new', // starts as NEW
@@ -147,6 +151,8 @@ export const BugsView: React.FC = () => {
     if (res.success) {
       setTitle('');
       setDescription('');
+      setExpectedResult('');
+      setActualResult('');
       setProjectId('');
       setModuleId('');
       setTestCaseId('');
@@ -189,6 +195,8 @@ export const BugsView: React.FC = () => {
       testCaseId: testCaseId || null,
       title: title.trim(),
       description: description.trim(),
+      expectedResult: expectedResult.trim(),
+      actualResult: actualResult.trim(),
       severity,
       priority,
       status: finalStatus,
@@ -208,6 +216,8 @@ export const BugsView: React.FC = () => {
     setSelectedBug(bug);
     setTitle(bug.title);
     setDescription(bug.description);
+    setExpectedResult(bug.expectedResult || '');
+    setActualResult(bug.actualResult || '');
     setProjectId(bug.projectId);
     setModuleId(bug.moduleId);
     setTestCaseId(bug.testCaseId || '');
@@ -848,12 +858,40 @@ export const BugsView: React.FC = () => {
                   Steps to Reproduce / Details
                 </label>
                 <textarea
-                  placeholder="Provide precise details, steps to reproduce, actual vs expected results, error logs or tracebacks..."
+                  placeholder="Provide precise details, steps to reproduce, error logs or tracebacks..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  rows={4}
+                  rows={3}
                   className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-red-650 dark:text-red-400 uppercase tracking-wide flex items-center gap-1">
+                    Actual Result
+                  </label>
+                  <textarea
+                    placeholder="What actually happens or fails during execution..."
+                    value={actualResult}
+                    onChange={(e) => setActualResult(e.target.value)}
+                    rows={3}
+                    className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden focus:ring-1 focus:ring-red-500"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide flex items-center gap-1">
+                    Expected Result
+                  </label>
+                  <textarea
+                    placeholder="What should happen when the feature works correctly..."
+                    value={expectedResult}
+                    onChange={(e) => setExpectedResult(e.target.value)}
+                    rows={3}
+                    className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-3">
@@ -1057,9 +1095,37 @@ export const BugsView: React.FC = () => {
                   placeholder="Provide details..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  rows={4}
+                  rows={3}
                   className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-805 dark:text-slate-205 text-sm rounded-xl focus:outline-hidden"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-red-650 dark:text-red-400 uppercase tracking-wide">
+                    Actual Result
+                  </label>
+                  <textarea
+                    placeholder="Actual behavior observed..."
+                    value={actualResult}
+                    onChange={(e) => setActualResult(e.target.value)}
+                    rows={3}
+                    className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide">
+                    Expected Result
+                  </label>
+                  <textarea
+                    placeholder="Expected behavior..."
+                    value={expectedResult}
+                    onChange={(e) => setExpectedResult(e.target.value)}
+                    rows={3}
+                    className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden"
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end gap-3 pt-3">
@@ -1242,6 +1308,27 @@ export const BugsView: React.FC = () => {
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 font-sans">Steps to Reproduce & Description</h4>
                 <div className="bg-slate-50/20 dark:bg-slate-950/10 border border-slate-150 dark:border-slate-800 p-4 rounded-xl text-xs text-slate-700 dark:text-slate-300 font-mono whitespace-pre-wrap leading-relaxed">
                   {viewBug.description || <em className="text-slate-450">No reproduction description filed.</em>}
+                </div>
+              </div>
+
+              {/* Actual and Expected Results */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-sans">
+                <div className="bg-red-50/20 dark:bg-red-950/10 border border-red-200 dark:border-red-800/50 p-4 rounded-xl text-xs space-y-1">
+                  <span className="text-xs font-bold text-red-650 dark:text-red-400 uppercase tracking-wide block">
+                    Actual Result
+                  </span>
+                  <p className="text-slate-700 dark:text-slate-300 font-medium whitespace-pre-wrap leading-relaxed">
+                    {viewBug.actualResult || <em className="text-slate-400 italic">No actual result specified.</em>}
+                  </p>
+                </div>
+
+                <div className="bg-emerald-50/20 dark:bg-emerald-950/10 border border-emerald-200 dark:border-emerald-800/50 p-4 rounded-xl text-xs space-y-1">
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide block">
+                    Expected Result
+                  </span>
+                  <p className="text-slate-700 dark:text-slate-300 font-medium whitespace-pre-wrap leading-relaxed">
+                    {viewBug.expectedResult || <em className="text-slate-400 italic">No expected result specified.</em>}
+                  </p>
                 </div>
               </div>
 
