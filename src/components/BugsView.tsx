@@ -711,11 +711,11 @@ export const BugsView: React.FC = () => {
                 <label className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wide">
                   Defect Summary Title <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
+                <textarea
                   placeholder="e.g., API returning 500 error on duplicate checkout submissions"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
+                  rows={2}
                   className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
                   required
                 />
@@ -902,11 +902,11 @@ export const BugsView: React.FC = () => {
                 <label className="text-xs font-bold text-slate-650 dark:text-slate-400 uppercase tracking-wide">
                   Defect Summary Title <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
+                <textarea
                   placeholder="e.g., API returning 500 error on duplicate checkout submissions"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
+                  rows={2}
                   className="w-full px-3.5 py-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 text-sm rounded-xl focus:outline-hidden"
                   required
                 />
