@@ -248,6 +248,10 @@
     "/settings/{settingsId}": {
       "schema": "SystemSettings",
       "description": "Enterprise system preferences"
+    },
+    "/suggestions/{suggestionId}": {
+      "schema": "Suggestion",
+      "description": "Suggestions and feedback items collection"
     }
   }
 }

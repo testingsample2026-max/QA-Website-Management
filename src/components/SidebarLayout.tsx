@@ -32,7 +32,8 @@ import {
   ChevronDown,
   FileCode as FileJson,
   FileText,
-  Presentation
+  Presentation,
+  Lightbulb
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { AppNotification } from '../types';
@@ -48,6 +49,7 @@ import {
   exportQaEngineersToCSV,
   exportReleasesToCSV,
   exportAuditLogsToCSV,
+  exportSuggestionsToCSV,
   exportToJSON
 } from '../utils/exportUtils';
 
@@ -77,6 +79,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
     developers,
     qaEngineers,
     releases,
+    suggestions,
     auditLogs,
     exportData,
     addNotification,
@@ -94,6 +97,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
       case 'developers': return 'Developers';
       case 'qaengineers': return 'QA Engineers';
       case 'releases': return 'Releases';
+      case 'suggestions': return 'Suggestions & Feedback';
       case 'reports': return 'Reports';
       case 'auditlogs': return 'Audit Logs';
       case 'settings': return 'Settings';
@@ -111,6 +115,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
       case 'developers': return developers.length > 0;
       case 'qaengineers': return qaEngineers.length > 0;
       case 'releases': return releases.length > 0;
+      case 'suggestions': return suggestions.length > 0;
       case 'auditlogs': return auditLogs.length > 0;
       case 'dashboard':
       case 'reports':
@@ -147,6 +152,9 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
           break;
         case 'releases':
           exportReleasesToCSV(releases);
+          break;
+        case 'suggestions':
+          exportSuggestionsToCSV(suggestions);
           break;
         case 'auditlogs':
           exportAuditLogsToCSV(auditLogs);
@@ -654,6 +662,7 @@ export const SidebarLayout: React.FC<SidebarLayoutProps> = ({
     { id: 'developers', name: 'Developer Management', icon: <Code className="w-5 h-5" /> },
     { id: 'qaengineers', name: 'QA Engineer Management', icon: <ShieldCheck className="w-5 h-5" /> },
     { id: 'releases', name: 'Release Management', icon: <Rocket className="w-5 h-5" /> },
+    { id: 'suggestions', name: 'Suggestions & Feedback', icon: <Lightbulb className="w-5 h-5" /> },
     { id: 'reports', name: 'Reports', icon: <BarChart3 className="w-5 h-5" /> },
     { id: 'auditlogs', name: 'Audit Logs', icon: <ScrollText className="w-5 h-5" /> },
     { id: 'profile', name: 'Profile', icon: <User className="w-5 h-5" /> },

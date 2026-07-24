@@ -14,6 +14,7 @@ import { TestCasesView } from './components/TestCasesView';
 import { BugsView } from './components/BugsView';
 import { PeopleView } from './components/PeopleView';
 import { ReleasesView } from './components/ReleasesView';
+import { SuggestionsView } from './components/SuggestionsView';
 import { ReportsView } from './components/ReportsView';
 import { AuditLogsView } from './components/AuditLogsView';
 import { SettingsView } from './components/SettingsView';
@@ -49,6 +50,8 @@ function AppContent() {
         return <PeopleView defaultSection="qas" />;
       case 'releases':
         return <ReleasesView />;
+      case 'suggestions':
+        return <SuggestionsView />;
       case 'reports':
         return <ReportsView />;
       case 'auditlogs':

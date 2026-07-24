@@ -108,10 +108,37 @@ export interface Release {
   createdAt: string;
 }
 
+export interface SuggestionComment {
+  id: string;
+  authorName: string;
+  authorRole: string;
+  comment: string;
+  createdAt: string;
+}
+
+export interface Suggestion {
+  id: string; // e.g., SUG-1001
+  projectId?: string;
+  moduleId?: string;
+  title: string;
+  description: string;
+  category: 'feature_request' | 'ui_ux' | 'process_improvement' | 'automation_idea' | 'performance' | 'other';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  status: 'open' | 'under_review' | 'planned' | 'in_progress' | 'implemented' | 'declined';
+  submittedBy: string;
+  userRole?: string;
+  votes: number;
+  votedUserIds?: string[];
+  responseNote?: string;
+  comments?: SuggestionComment[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AuditLog {
   id: string;
   action: 'CREATE' | 'UPDATE' | 'DELETE' | 'ARCHIVE' | 'RESTORE' | 'DUPLICATE' | 'BULK_UPDATE' | 'BULK_DELETE' | 'IMPORT';
-  entityType: 'Project' | 'Module' | 'Requirement' | 'TestCase' | 'TestExecution' | 'Bug' | 'Developer' | 'QaEngineer' | 'Release';
+  entityType: 'Project' | 'Module' | 'Requirement' | 'TestCase' | 'TestExecution' | 'Bug' | 'Developer' | 'QaEngineer' | 'Release' | 'Suggestion';
   entityId: string;
   entityName: string;
   details: string;

@@ -23,12 +23,14 @@ import {
   ArrowUpDown,
   MoreVertical,
   X,
-  FolderOpen
+  FolderOpen,
+  Lightbulb
 } from 'lucide-react';
 
 export const ProjectsView: React.FC = () => {
   const {
     projects,
+    suggestions,
     addProject,
     updateProject,
     deleteProject,
@@ -364,6 +366,7 @@ export const ProjectsView: React.FC = () => {
                   </th>
                   <th className="p-4">Type</th>
                   <th className="p-4">Description</th>
+                  <th className="p-4">Suggestions</th>
                   <th className="p-4 w-24">Status</th>
                   <th className="p-4 w-28 text-right">Actions</th>
                 </tr>
@@ -401,6 +404,17 @@ export const ProjectsView: React.FC = () => {
                     </td>
                     <td className="p-4 text-slate-500 dark:text-slate-400 max-w-xs truncate">
                       {p.description || <span className="text-slate-300 italic">No description</span>}
+                    </td>
+                    <td className="p-4">
+                      {(() => {
+                        const count = suggestions.filter(s => s.projectId === p.id).length;
+                        return (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 dark:bg-teal-950/60 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+                            <Lightbulb className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                            {count} {count === 1 ? 'Idea' : 'Ideas'}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="p-4">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${

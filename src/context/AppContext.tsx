@@ -16,7 +16,9 @@ import {
   Release,
   AuditLog,
   AppNotification,
-  SystemSettings
+  SystemSettings,
+  Suggestion,
+  SuggestionComment
 } from '../types';
 import {
   saveDocToFirestore,
@@ -37,6 +39,7 @@ interface AppContextType {
   qaEngineers: QaEngineer[];
   releases: Release[];
   auditLogs: AuditLog[];
+  suggestions: Suggestion[];
   notifications: AppNotification[];
   settings: SystemSettings;
   loading: boolean;
@@ -103,6 +106,13 @@ interface AppContextType {
   updateRelease: (id: string, data: Partial<Release>) => { success: boolean; error?: string };
   deleteRelease: (id: string) => { success: boolean; error?: string };
 
+  addSuggestion: (data: Omit<Suggestion, 'id' | 'createdAt' | 'updatedAt' | 'votes'>) => { success: boolean; error?: string; id?: string };
+  updateSuggestion: (id: string, data: Partial<Suggestion>) => { success: boolean; error?: string };
+  deleteSuggestion: (id: string) => { success: boolean; error?: string };
+  clearAllSuggestions: () => { success: boolean; error?: string };
+  voteSuggestion: (id: string, userId: string) => { success: boolean; error?: string };
+  addSuggestionComment: (suggestionId: string, comment: string, authorName: string, authorRole: string) => { success: boolean; error?: string };
+
   // Bulk Operations
   bulkUpdate: (entityType: AuditLog['entityType'], ids: string[], updates: any) => { success: boolean; error?: string };
   bulkDelete: (entityType: AuditLog['entityType'], ids: string[]) => { success: boolean; error?: string };
@@ -155,6 +165,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [developers, setDevelopers] = useState<Developer[]>([]);
   const [qaEngineers, setQaEngineers] = useState<QaEngineer[]>([]);
   const [releases, setReleases] = useState<Release[]>([]);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [settings, setSettings] = useState<SystemSettings>(defaultSettings);
@@ -174,6 +185,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           devs,
           qas,
           rels,
+          sugs,
           logs,
           notifs,
           systemSettings
@@ -187,6 +199,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           fetchCollectionFromFirestore<Developer>('developers'),
           fetchCollectionFromFirestore<QaEngineer>('qaEngineers'),
           fetchCollectionFromFirestore<Release>('releases'),
+          fetchCollectionFromFirestore<Suggestion>('suggestions'),
           fetchCollectionFromFirestore<AuditLog>('auditLogs'),
           fetchCollectionFromFirestore<AppNotification>('notifications'),
           fetchCollectionFromFirestore<SystemSettings>('settings')
@@ -205,6 +218,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setDevelopers(devs);
         setQaEngineers(qas);
         setReleases(rels);
+        setSuggestions(sugs || []);
+
         setAuditLogs(sortedLogs);
         setNotifications(sortedNotifs);
 
@@ -1053,6 +1068,118 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { success: true };
   }, [releases, logActivity, addNotification]);
 
+  // --- SUGGESTION CRUD ---
+  const addSuggestion = useCallback((data: Omit<Suggestion, 'id' | 'createdAt' | 'updatedAt' | 'votes'>) => {
+    if (!data.title || !data.title.trim()) return { success: false, error: 'Suggestion title is required' };
+    if (!data.description || !data.description.trim()) return { success: false, error: 'Suggestion description is required' };
+
+    const id = generateId('SUG', suggestions);
+    const now = new Date().toISOString();
+    const newSug: Suggestion = {
+      ...data,
+      id,
+      title: data.title.trim(),
+      description: data.description.trim(),
+      votes: 1,
+      votedUserIds: ['current_user'],
+      comments: [],
+      createdAt: now,
+      updatedAt: now
+    };
+
+    setSuggestions(prev => [newSug, ...prev]);
+    saveDocToFirestore('suggestions', id, newSug).catch(err => console.error(err));
+
+    logActivity('CREATE', 'Suggestion', id, newSug.title, `Submitted suggestion under category ${newSug.category}`);
+    addNotification('Suggestion Submitted', `Thank you! Your suggestion "${newSug.title}" was published.`, 'success');
+    return { success: true, id };
+  }, [suggestions, generateId, logActivity, addNotification]);
+
+  const updateSuggestion = useCallback((id: string, data: Partial<Suggestion>) => {
+    if (data.title !== undefined && !data.title.trim()) return { success: false, error: 'Suggestion title cannot be empty' };
+
+    setSuggestions(prev => prev.map(s => {
+      if (s.id === id) {
+        const updated = { ...s, ...data, updatedAt: new Date().toISOString() };
+        saveDocToFirestore('suggestions', id, updated).catch(err => console.error(err));
+        logActivity('UPDATE', 'Suggestion', id, updated.title, `Updated suggestion status or details`);
+        return updated;
+      }
+      return s;
+    }));
+    return { success: true };
+  }, [logActivity]);
+
+  const deleteSuggestion = useCallback((id: string) => {
+    const sug = suggestions.find(s => s.id === id);
+    if (!sug) return { success: false, error: 'Suggestion not found' };
+
+    setSuggestions(prev => prev.filter(s => s.id !== id));
+    deleteDocFromFirestore('suggestions', id).catch(err => console.error(err));
+
+    logActivity('DELETE', 'Suggestion', id, sug.title, `Deleted suggestion "${sug.title}"`);
+    addNotification('Suggestion Removed', `Suggestion "${sug.title}" was permanently removed.`, 'warning');
+    return { success: true };
+  }, [suggestions, logActivity, addNotification]);
+
+  const clearAllSuggestions = useCallback(() => {
+    suggestions.forEach(s => {
+      deleteDocFromFirestore('suggestions', s.id).catch(err => console.error(err));
+    });
+    setSuggestions([]);
+    logActivity('BULK_DELETE', 'Suggestion', 'ALL', 'All Suggestions', 'Cleared all suggestions');
+    addNotification('Suggestions Cleared', 'All suggestions have been cleared.', 'info');
+    return { success: true };
+  }, [suggestions, logActivity, addNotification]);
+
+  const voteSuggestion = useCallback((id: string, userId: string) => {
+    setSuggestions(prev => prev.map(s => {
+      if (s.id === id) {
+        const currentVoted = s.votedUserIds || [];
+        const hasVoted = currentVoted.includes(userId);
+        const newVoted = hasVoted ? currentVoted.filter(u => u !== userId) : [...currentVoted, userId];
+        const newVotes = hasVoted ? Math.max(0, s.votes - 1) : s.votes + 1;
+        const updated = {
+          ...s,
+          votes: newVotes,
+          votedUserIds: newVoted,
+          updatedAt: new Date().toISOString()
+        };
+        saveDocToFirestore('suggestions', id, updated).catch(err => console.error(err));
+        return updated;
+      }
+      return s;
+    }));
+    return { success: true };
+  }, []);
+
+  const addSuggestionComment = useCallback((suggestionId: string, commentText: string, authorName: string, authorRole: string) => {
+    if (!commentText || !commentText.trim()) return { success: false, error: 'Comment text cannot be empty' };
+
+    const newComment: SuggestionComment = {
+      id: `CMT-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      authorName: authorName || 'Anonymous User',
+      authorRole: authorRole || 'QA Team',
+      comment: commentText.trim(),
+      createdAt: new Date().toISOString()
+    };
+
+    setSuggestions(prev => prev.map(s => {
+      if (s.id === suggestionId) {
+        const updatedComments = [...(s.comments || []), newComment];
+        const updated = {
+          ...s,
+          comments: updatedComments,
+          updatedAt: new Date().toISOString()
+        };
+        saveDocToFirestore('suggestions', suggestionId, updated).catch(err => console.error(err));
+        return updated;
+      }
+      return s;
+    }));
+    return { success: true };
+  }, []);
+
 
   // --- BULK OPERATIONS ---
   const bulkUpdate = useCallback((entityType: AuditLog['entityType'], ids: string[], updates: any) => {
@@ -1198,11 +1325,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       developers,
       qaEngineers,
       releases,
+      suggestions,
       auditLogs,
       settings
     };
     return JSON.stringify(fullState, null, 2);
-  }, [projects, modules, requirements, testCases, executions, bugs, developers, qaEngineers, releases, auditLogs, settings]);
+  }, [projects, modules, requirements, testCases, executions, bugs, developers, qaEngineers, releases, suggestions, auditLogs, settings]);
 
   const importData = useCallback((jsonData: string) => {
     try {
@@ -1245,6 +1373,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setReleases(parsed.releases);
         saveBatchToFirestore('releases', parsed.releases).catch(err => console.error(err));
       }
+      if (parsed.suggestions && Array.isArray(parsed.suggestions)) {
+        setSuggestions(parsed.suggestions);
+        saveBatchToFirestore('suggestions', parsed.suggestions).catch(err => console.error(err));
+      }
       if (parsed.auditLogs && Array.isArray(parsed.auditLogs)) {
         setAuditLogs(parsed.auditLogs);
         saveBatchToFirestore('auditLogs', parsed.auditLogs).catch(err => console.error(err));
@@ -1275,6 +1407,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       developers,
       qaEngineers,
       releases,
+      suggestions,
       auditLogs,
       notifications,
       settings,
@@ -1321,6 +1454,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addRelease,
       updateRelease,
       deleteRelease,
+
+      addSuggestion,
+      updateSuggestion,
+      deleteSuggestion,
+      clearAllSuggestions,
+      voteSuggestion,
+      addSuggestionComment,
 
       bulkUpdate,
       bulkDelete,

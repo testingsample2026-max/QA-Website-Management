@@ -24,7 +24,8 @@ import {
   Release, 
   AuditLog, 
   AppNotification, 
-  SystemSettings 
+  SystemSettings,
+  Suggestion 
 } from '../types';
 
 // Generic CRUD functions

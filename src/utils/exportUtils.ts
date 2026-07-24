@@ -13,7 +13,8 @@ import {
   Developer,
   QaEngineer,
   Release,
-  AuditLog
+  AuditLog,
+  Suggestion
 } from '../types';
 
 // Generic download helper function
@@ -221,6 +222,27 @@ export const exportAuditLogsToCSV = (auditLogs: AuditLog[]) => {
   ]);
   const csvContent = [headers, ...rows].map(row => row.map(escapeCSV).join(',')).join('\n');
   downloadFile(csvContent, 'audit_logs_export.csv', 'text/csv;charset=utf-8;');
+};
+
+export const exportSuggestionsToCSV = (suggestions: Suggestion[]) => {
+  const headers = ['ID', 'Project ID', 'Module ID', 'Title', 'Category', 'Priority', 'Status', 'Submitted By', 'Role', 'Votes', 'Response Note', 'Comments Count', 'Created At'];
+  const rows = suggestions.map(s => [
+    s.id,
+    s.projectId || 'General / Portal Wide',
+    s.moduleId || 'N/A',
+    s.title,
+    s.category,
+    s.priority,
+    s.status,
+    s.submittedBy,
+    s.userRole || '',
+    s.votes,
+    s.responseNote || '',
+    (s.comments || []).length,
+    s.createdAt
+  ]);
+  const csvContent = [headers, ...rows].map(row => row.map(escapeCSV).join(',')).join('\n');
+  downloadFile(csvContent, 'suggestions_export.csv', 'text/csv;charset=utf-8;');
 };
 
 export const exportToJSON = (data: any, filename: string) => {
